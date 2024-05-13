@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 import re
 class AssemblySimulator:
-    def __init__(self, master):
+    def __init__(self):
         self.registers = {'%A': 0, '%D': 0}
         self.memoria = [0] * 16000
         self.program_counter = 0
@@ -29,7 +29,7 @@ class AssemblySimulator:
             'jle': self.jle,
             'nop': self.nop
         }
-        self.clockCyclesNumber = 0
+        self.clockCycles = 0
         self.reg = r'%[AD]'
         self.mem = r'\(%[A]\)'
         self.im = r'\$(1|0|-1)'
@@ -55,83 +55,7 @@ class AssemblySimulator:
             'jl': [self.reg],
             'jle': [self.reg],
             'nop': []
-        }
-        self.master = master
-        master.title("Assembly Code Simulator")
-        
-        # Menu for file operations
-        self.menu = tk.Menu(master)
-        master.config(menu=self.menu)
-        file_menu = tk.Menu(self.menu, tearoff=0)
-        self.menu.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Open...", command=self.load_file)
-        file_menu.add_command(label="Save As...", command=self.save_file)
-        file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=master.quit)
-
-        # Assembly code editor
-        self.code_editor = tk.Text(master, height=20, width=60)
-        self.code_editor.pack()
-        self.code_editor.tag_configure("highlight", background="yellow")
-
-        # RAM list
-        self.ram_view = tk.Listbox(master, height=10, width=45)
-        self.ram_view.pack()
-
-        # Registers
-        self.cu = tk.Listbox(master, height=2, width=30)
-        self.cu.pack()
-        self.update_ram()
-        # Control buttons
-        self.run_button = tk.Button(master, text="Run", command=self.run)
-        self.save_button = tk.Button(master, text="Save", command=self.updateCode)
-        self.step_button = tk.Button(master, text="Step", command=self.step)
-        self.restart_button = tk.Button(master, text="Restart", command=self.restart_simulation)
-
-        self.run_button.pack(side=tk.LEFT)
-        self.save_button.pack(side=tk.LEFT)
-        self.step_button.pack(side=tk.LEFT)
-        self.restart_button.pack(side=tk.LEFT)
-        self.clockCycles = tk.Label(master, text="Clock Cycles: 0")
-        self.clockCycles.pack()
-
-
-    def update_ram(self):
-        self.ram_view.delete(0, tk.END)  # Clear the Listbox
-        for i, value in enumerate(self.memoria):
-            self.ram_view.insert(tk.END, f'R{i}: {value}                                           {0:016b}')
-        self.cu.delete(0, tk.END)
-        self.cu.insert(tk.END, f'%A: {self.registers["%A"]}               binary: {0:016b}')
-        self.cu.insert(tk.END, f'%D: {self.registers["%D"]}               binary: {0:016b}')
-    def load_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
-        if file_path:
-            with open(file_path, "r") as file:
-                self.code_editor.delete(1.0, tk.END)
-                self.code_editor.insert(tk.END, file.read())
-        self.updateCode()        
-    def save_file(self):
-        file_path = filedialog.asksaveasfilename(filetypes=[("Text files", "*.txt")])
-        if file_path:
-            with open(file_path, "w") as file:
-                file.write(self.code_editor.get(1.0, tk.END))
-        self.updateCode()    
-    def updateCode(self):
-        self.assembly = self.code_editor.get(1.0, tk.END)
-        self.code = self.prepare(self.assembly)
-    def restart_simulation(self):
-        self.registers = {'%A': 0, '%D': 0}
-        self.memoria = [0] * 16000
-        self.program_counter = 0
-        self.sections = {}
-        self.code_editor.tag_remove("highlight", "1.0", "end")
-        # Add highlight tag to the determined line
-        self.code_editor.tag_add("highlight", f"{1}.0", f"{1}.end")
-        self.clockCyclesNumber = 0
-        self.clockCycles.config(text=f"Clock Cycles: {self.clockCyclesNumber}")
-        self.updateCode()
-        self.update_ram()
-
+        }   
     def prepare(self, code):
         code = code.split('\n')
         code = [i.strip() for i in code]
@@ -178,23 +102,15 @@ class AssemblySimulator:
         return False        
 
     def run(self):
-
-        self.updateCode()
         instructions = self.code
-
         while self.program_counter < len(instructions):
             instruction = instructions[self.program_counter].strip()
             self.execute_instruction(instruction)
             self.program_counter += 1
-        self.update_ram()
-
     def step(self):
         instruction = self.code[self.program_counter]
-        print(instruction)
         self.execute_instruction(instruction)
-        self.highlight_line()
         self.program_counter += 1
-        self.update_ram()
     def execute_instruction(self, instruction):
         if instruction.endswith(':'):
             return
@@ -204,6 +120,7 @@ class AssemblySimulator:
         valido = self.validar(op, args)
         if valido:
             if valido[0] == 'arg errado':
+                print(self.code[self.program_counter])
                 raise Exception(f"linha {self.program_counter+1}: Argumento {valido[1]} é invalido")
             if valido[0] == 'faltou arg':
                 raise Exception(f"linha {self.program_counter+1}: Operação {op} está faltando argumento {valido[1]}")
@@ -216,8 +133,7 @@ class AssemblySimulator:
                 tipos = [self.tipo(i) for i in args]
                 args = list(zip(args, tipos))
                 self.funcoes[op](args)
-        self.clockCyclesNumber += 1
-        self.clockCycles.config(text=f"Clock Cycles: {self.clockCyclesNumber}")
+        self.clockCycles += 1
     def create_section(self, name):
         self.sections[name] = self.program_counter
     def leaw(self, args):
@@ -287,7 +203,6 @@ class AssemblySimulator:
         elif args[2][1] == 'memoria':
             self.memoria[self.registers['%A']] = result
     def jmp(self):
-        print(self.sections)
         self.program_counter = self.sections[self.registers['%A']]
     def je(self, args):
         if self.registers[args[0][0]] == 0:
@@ -310,6 +225,96 @@ class AssemblySimulator:
             self.program_counter = self.sections[self.registers['%A']]
     def nop(self):
         pass
+    def restart(self):
+        self.registers = {'%A': 0, '%D': 0}
+        self.memoria = [0] * 16000
+        self.program_counter = 0
+        self.sections = {}
+        self.clockCycles = 0
+
+class AssemblySimulatorGUI:
+    def __init__(self, master):
+        self.SIM = AssemblySimulator()
+        self.master = master
+        master.title("Assembly Code Simulator")
+        # Menu for file operations
+        self.menu = tk.Menu(master)
+        master.config(menu=self.menu)
+        file_menu = tk.Menu(self.menu, tearoff=0)
+        self.menu.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Open...", command=self.load_file)
+        file_menu.add_command(label="Save As...", command=self.save_file)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=master.quit)
+
+        # Assembly code editor
+        self.code_editor = tk.Text(master, height=20, width=60)
+        self.code_editor.pack()
+        self.code_editor.tag_configure("highlight", background="yellow")
+
+        # RAM list
+        self.ram_view = tk.Listbox(master, height=10, width=45)
+        self.ram_view.pack()
+
+        # Registers
+        self.cu = tk.Listbox(master, height=2, width=30)
+        self.cu.pack()
+        self.update_ram()
+        # Control buttons
+        self.run_button = tk.Button(master, text="Run", command=self.run)
+        self.save_button = tk.Button(master, text="Save", command=self.updateCode)
+        self.step_button = tk.Button(master, text="Step", command=self.step)
+        self.restart_button = tk.Button(master, text="Restart", command=self.restart)
+
+        self.run_button.pack(side=tk.LEFT)
+        self.save_button.pack(side=tk.LEFT)
+        self.step_button.pack(side=tk.LEFT)
+        self.restart_button.pack(side=tk.LEFT)
+        self.clockCycles = tk.Label(master, text="Clock Cycles: 0")
+        self.clockCycles.pack()
+    def restart(self):
+        self.SIM.restart()
+        self.update_ram()
+        self.code_editor.tag_remove("highlight", "1.0", "end")
+        # Add highlight tag to the determined line
+        self.code_editor.tag_add("highlight", f"{1}.0", f"{1}.end")
+        self.clockCycles.config(text=f"Clock Cycles: 0")
+        self.update_ram()
+    def run(self):
+        self.updateCode()
+        self.SIM.run()
+        self.update_ram()
+        self.clockCycles.config(text=f"Clock Cycles: {self.SIM.clockCycles}")
+    def step(self):
+        self.SIM.step()
+        self.update_ram()
+        self.highlight_line()
+        self.clockCycles.config(text=f"Clock Cycles: {self.SIM.clockCycles}")
+
+    def update_ram(self):
+        self.ram_view.delete(0, tk.END)  # Clear the Listbox
+        for i, value in enumerate(self.SIM.memoria):
+            self.ram_view.insert(tk.END, f'R{i}: {value}                                           {0:016b}')
+        self.cu.delete(0, tk.END)
+        self.cu.insert(tk.END, f'%A: {self.SIM.registers["%A"]}               binary: {0:016b}')
+        self.cu.insert(tk.END, f'%D: {self.SIM.registers["%D"]}               binary: {0:016b}')
+    def load_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+        if file_path:
+            with open(file_path, "r") as file:
+                self.code_editor.delete(1.0, tk.END)
+                self.code_editor.insert(tk.END, file.read())
+        self.updateCode()
+    def save_file(self):
+        file_path = filedialog.asksaveasfilename(filetypes=[("Text files", "*.txt")])
+        if file_path:
+            with open(file_path, "w") as file:
+                file.write(self.code_editor.get(1.0, tk.END))
+        self.updateCode()    
+    def updateCode(self):
+        self.SIM.assembly = self.code_editor.get(1.0, tk.END)
+        self.SIM.code = self.SIM.prepare(self.SIM.assembly)
+        
     def highlight_line(self):
         # Get all lines of text from the text editor
         lines = self.code_editor.get(1.0, tk.END).split('\n')
@@ -324,9 +329,8 @@ class AssemblySimulator:
             line_number += 1
             if line and line[0] != ';':  # Consider the line if it's not empty and not a comment
                 realCount += 1
-            if realCount == self.program_counter+2:
+            if realCount == self.SIM.program_counter+2:
                 break
-        print(line_number, self.program_counter)
 
         # Remove any previous highlights
         self.code_editor.tag_remove("highlight", "1.0", "end")
@@ -336,5 +340,5 @@ class AssemblySimulator:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = AssemblySimulator(root)
+    app = AssemblySimulatorGUI(root)
     root.mainloop()

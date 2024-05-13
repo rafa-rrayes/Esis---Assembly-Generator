@@ -163,7 +163,10 @@ def whileEnd(linha, whileNumber):
 movw %A, %D\n"""
     else:
         if primeiroValor in variaveis:
+            print(variaveis)
+            print(primeiroValor)
             end = getVariavel(primeiroValor)
+            print(end)
             fim += f"""leaw ${end}, %A
 movw (%A), %D\n"""
         else:
@@ -179,7 +182,7 @@ movw (%A), %A\n"""
         else:
             raise Exception(f"{segundoValor} not found in memory")
     fim += f"""subw %D, %A, %D
-leaw $WHILE{whileNumber}, %A"""
+leaw $WHILE{whileNumber}, %A\n"""
     if op == '==':
         fim += "je %D\nnop\n"
     if op == '!=':
@@ -246,9 +249,9 @@ leaw $ENDIF{func}, %A\n"""
     if op == '>=':
         assembly += "jl %D\nnop\n"
     if op == '<':
-        assembly += "jg %D\nnop\n"
-    if op == '<=':
         assembly += "jge %D\nnop\n"
+    if op == '<=':
+        assembly += "jg %D\nnop\n"
     assembly += f"""leaw $1024, %A
 movw (%A), %D
 incw %D
@@ -266,22 +269,23 @@ ENDIF{func}:"""
 
 def callFunc(linha):
     nome = linha[:-2]
+    assembly = f"""leaw $1024, %A
+movw (%A), %A
+movw %A, %D
+incw %D
+leaw $1024, %A
+movw %D, (%A)
 
-
-    assembly = f"""leaw $ENDCall{nome}, %A
+leaw $ENDCall{nome}, %A
 movw %A, %D
 leaw $1024, %A
 movw (%A), %A
-incw %A
-movw %D, (%A)
-leaw $1024, %A
-movw (%A), %D
-incw %D
 movw %D, (%A)
 leaw ${nome}, %A
 jmp
 nop
 ENDCall{nome}:"""
+
     return assembly
 def DefFunc(nome):
     inicio = f"""
@@ -293,13 +297,19 @@ nop
     
     return inicio
 def EndFunc(nome):
-    fim = f"""
-leaw $END{nome}, %A
+    fim = f"""leaw $1024, %A
+movw (%A), %A
+movw %A, %D
+decw %D
+leaw $1024, %A
+movw %D, (%A)
+incw %D
+movw %D, %A
+movw (%A), %A
 jmp
 nop
-{nome}:
+END{nome}:
 """
-    
     return fim
 def parse(codigo):
     funcoes = []
@@ -322,32 +332,33 @@ def parse(codigo):
         elif '()' in linha:
             function = callFunc
         elif linha.startswith('def '):
-            nome = linha[3:][:-1].strip()
+            nome = linha[3:][:-1].strip()            
             funcoes.append(nome)
             assembly+= DefFunc(nome) +'\n'
             last.append('funcao')
             continue
         elif linha.startswith('while '):
+            whileNumber += 1
             assembly += whileStart(whileNumber)
             funcoes.append(linha)
-            whileNumber += 1
+            last.append('while')
             continue
         elif linha.strip() == '}':
             if last[-1] == 'funcao':
+                print(linha, 'func')
                 assembly += EndFunc(funcoes[-1])
                 funcoes.pop()
+                last.pop()
             elif last[-1] == 'while':
-                assembly += whileEnd(funcoes[-1])
+                print(linha, 'while')
+                assembly += whileEnd(funcoes[-1], whileNumber)
                 funcoes.pop()
-                whileNumber -= 1
+                last.pop()
             continue
         elif linha.strip() == '':
             continue
-        # else:
-        #     print(linha, 'ooo')
-        # print(linha)
+        
         assembly+= function(linha) +'\n'
-    # assembly = assembly.replace('\t', '').replace(' ', '')
     return assembly
 
 
@@ -355,11 +366,12 @@ codigoFatorial = """
 A = 5
 C = A -1 
 def fact{
-    B = C
-    Copia = A
-    multi()
-    C = C-1
-    if C != 1: fact
+    while C > 1{
+        B = C
+        Copia = A
+        multi()
+        C = C-1
+    }
 }
 def multi{
     while B > 1{
@@ -369,14 +381,22 @@ def multi{
 }
 fact()
 """
-codigoQuadrado = """
-A = 0
-B = 5
-while A < 10{
-    A = A + 1
-    B = B + 3
+codigoDivisao = """
+A = 10
+B = 2
+resultado = 0
+def sub1{
+    resultado = resultado -1
 }
+def divisao{
+    while A > 0{
+    A = A - B
+    resultado = resultado + 1
+    if A < 0: sub1
+    }
+}
+divisao()
 """
-
-print(parse(codigoFatorial))
-
+texto = parse(codigoDivisao)
+with open('teste.esis', 'w') as file:
+    file.write(texto)
