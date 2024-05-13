@@ -23,8 +23,6 @@ This repository contains a Python script for translating a custom high-level pro
 - [Examples](#examples)
   - [Factorial Calculation](#factorial-calculation)
   - [Division Calculation](#division-calculation)
-- [Script Functions](#script-functions)
-
 ## Writing Code
 
 The custom language supports variable assignment, arithmetic operations, logical operations, control flow (if statements, while loops), and functions. Here's a guide on how to write code in this language.
