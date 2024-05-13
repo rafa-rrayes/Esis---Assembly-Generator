@@ -397,6 +397,6 @@ def divisao{
 }
 divisao()
 """
-texto = parse(codigoDivisao)
-with open('teste.esis', 'w') as file:
+texto = parse(codigoFatorial)
+with open('fatorial.esis', 'w') as file:
     file.write(texto)

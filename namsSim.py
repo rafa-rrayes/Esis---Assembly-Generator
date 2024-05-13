@@ -1,9 +1,10 @@
 import re
 class AssemblySimulator:
-    def __init__(self, ram_size=2024):
+    def __init__(self):
         self.registers = {'%A': 0, '%D': 0}
-        self.memoria = [0] * ram_size
+        self.memoria = [0] * 16000
         self.program_counter = 0
+        self.non_empty = []
         self.sections = {}
         self.funcoes = {
             'leaw': self.leaw,
@@ -26,6 +27,7 @@ class AssemblySimulator:
             'jle': self.jle,
             'nop': self.nop
         }
+        self.clockCycles = 0
         self.reg = r'%[AD]'
         self.mem = r'\(%[A]\)'
         self.im = r'\$(1|0|-1)'
@@ -51,8 +53,8 @@ class AssemblySimulator:
             'jl': [self.reg],
             'jle': [self.reg],
             'nop': []
-        }
-    def prepare(self, code):
+        }   
+    def loadCode(self, code):
         code = code.split('\n')
         code = [i.strip() for i in code]
         code = [re.sub(r';.*', '', i) for i in code]
@@ -64,7 +66,7 @@ class AssemblySimulator:
                 pc += 1
                 continue
             pc += 1
-        return code
+        self.code = code
     def parseValue(self, arg):
         if arg[1] == 'registrador':
             return self.registers[arg[0]]
@@ -95,17 +97,16 @@ class AssemblySimulator:
             except IndexError:
                 if argumento[-1] != '?':
                     return "faltou arg" , argumento
-        return False
-    def run(self, code=False):
-        if code != False:
-            self.assembly = code
-        instructions = self.prepare(self.assembly)
+        return False        
+
+    def run(self):
+        instructions = self.code
         while self.program_counter < len(instructions):
             instruction = instructions[self.program_counter].strip()
             self.execute_instruction(instruction)
             self.program_counter += 1
     def step(self):
-        instruction = self.prepare(self.assembly)[self.program_counter]
+        instruction = self.code[self.program_counter]
         self.execute_instruction(instruction)
         self.program_counter += 1
     def execute_instruction(self, instruction):
@@ -117,6 +118,7 @@ class AssemblySimulator:
         valido = self.validar(op, args)
         if valido:
             if valido[0] == 'arg errado':
+                print(self.code[self.program_counter])
                 raise Exception(f"linha {self.program_counter+1}: Argumento {valido[1]} é invalido")
             if valido[0] == 'faltou arg':
                 raise Exception(f"linha {self.program_counter+1}: Operação {op} está faltando argumento {valido[1]}")
@@ -129,6 +131,7 @@ class AssemblySimulator:
                 tipos = [self.tipo(i) for i in args]
                 args = list(zip(args, tipos))
                 self.funcoes[op](args)
+        self.clockCycles += 1
     def create_section(self, name):
         self.sections[name] = self.program_counter
     def leaw(self, args):
@@ -219,7 +222,13 @@ class AssemblySimulator:
         if self.registers[args[0][0]] <= 0:
             self.program_counter = self.sections[self.registers['%A']]
     def nop(self):
-        pass 
+        pass
+    def restart(self):
+        self.registers = {'%A': 0, '%D': 0}
+        self.memoria = [0] * 16000
+        self.program_counter = 0
+        self.sections = {}
+        self.clockCycles = 0
 
 # Example usage:
 sim = AssemblySimulator()
@@ -411,23 +420,8 @@ leaw $fact, %A
 jmp
 nop
 ENDCallfact:"""
-sim.assembly = instr
-sim.run()
-print(sim.registers)
-print(sim.memoria[0:7])
-# print(sim.memoria)
-# test_instructions = [
-#     "leaw $15, %A",
-#     "movw $0, %D",
-#     "addw %A, $1, %D",
-#     "subw %D, %A, %A, (%A)",
-#     "rsubw %A, %D, %A",
-#     "incw %D",
-#     "jmp",
-#     "je %D",
-#     "andw %A, %D",
-#     "nop",
-# ]
-
-# for instr in test_instructions:
-#     sim.execute_instruction(instr)
+if __name__ == '__main__':
+    sim.loadCode(instr)
+    sim.run()
+    print(sim.registers)
+    print(sim.memoria[0:7])
