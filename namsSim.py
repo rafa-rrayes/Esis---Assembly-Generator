@@ -4,6 +4,7 @@ class AssemblySimulator:
         self.registers = {'%A': 0, '%D': 0}
         self.memoria = [0] * 16000
         self.program_counter = 0
+        self.codeLines = {}
         self.non_empty = []
         self.sections = {}
         self.funcoes = {
@@ -57,16 +58,14 @@ class AssemblySimulator:
     def loadCode(self, code):
         code = code.split('\n')
         code = [i.strip() for i in code]
-        code = [re.sub(r';.*', '', i) for i in code]
-        code = [i for i in code if i != '']
+        self.codeLines = {i: code[i] for i in range(len(code))}
         pc = 0
-        for line in code:
+        for line in self.codeLines.values():
             if line.endswith(':'):
                 self.sections[line[:-1]] = pc
                 pc += 1
                 continue
-            pc += 1
-        self.code = code
+            pc += 1        
     def parseValue(self, arg):
         if arg[1] == 'registrador':
             return self.registers[arg[0]]
@@ -100,15 +99,22 @@ class AssemblySimulator:
         return False        
 
     def run(self):
-        instructions = self.code
-        while self.program_counter < len(instructions):
-            instruction = instructions[self.program_counter].strip()
-            self.execute_instruction(instruction)
-            self.program_counter += 1
+        instructions = self.codeLines
+        while self.program_counter < (len(instructions)-1):
+            self.step()
     def step(self):
-        instruction = self.code[self.program_counter]
+        instruction = self.codeLines[self.program_counter]
+        instruction = re.sub(r';.*', '', instruction)
         self.execute_instruction(instruction)
         self.program_counter += 1
+        if not self.program_counter >= len(self.codeLines):
+            instruction = self.codeLines[self.program_counter]
+            instruction = re.sub(r';.*', '', instruction)
+            while instruction.strip() == '' and self.program_counter < (len(self.codeLines)-1):
+                self.program_counter += 1
+                instruction = self.codeLines[self.program_counter]
+                instruction = re.sub(r';.*', '', instruction)
+        
     def execute_instruction(self, instruction):
         if instruction.endswith(':'):
             return
@@ -118,7 +124,6 @@ class AssemblySimulator:
         valido = self.validar(op, args)
         if valido:
             if valido[0] == 'arg errado':
-                print(self.code[self.program_counter])
                 raise Exception(f"linha {self.program_counter+1}: Argumento {valido[1]} é invalido")
             if valido[0] == 'faltou arg':
                 raise Exception(f"linha {self.program_counter+1}: Operação {op} está faltando argumento {valido[1]}")

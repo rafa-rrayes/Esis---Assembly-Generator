@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog
 from namsSim import AssemblySimulator
-
+from tkinter import messagebox
 class AssemblySimulatorGUI:
     def __init__(self, master):
         self.SIM = AssemblySimulator()
@@ -44,19 +44,26 @@ class AssemblySimulatorGUI:
         self.clockCycles.pack()
     def restart(self):
         self.SIM.restart()
+        self.SIM.loadCode(self.code_editor.get(1.0, tk.END))
         self.update_ram()
+
         self.code_editor.tag_remove("highlight", "1.0", "end")
         # Add highlight tag to the determined line
         self.code_editor.tag_add("highlight", f"{1}.0", f"{1}.end")
         self.clockCycles.config(text=f"Clock Cycles: 0")
-        self.update_ram()
     def run(self):
         self.updateCode()
-        self.SIM.run()
+        try:
+            self.SIM.run()
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
         self.update_ram()
         self.clockCycles.config(text=f"Clock Cycles: {self.SIM.clockCycles}")
     def step(self):
-        self.SIM.step()
+        try:
+            self.SIM.step()
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
         self.update_ram()
         self.highlight_line()
         self.clockCycles.config(text=f"Clock Cycles: {self.SIM.clockCycles}")
@@ -84,27 +91,12 @@ class AssemblySimulatorGUI:
     def updateCode(self):
         self.SIM.loadCode(self.code_editor.get(1.0, tk.END))        
     def highlight_line(self):
-        # Get all lines of text from the text editor
-        lines = self.code_editor.get(1.0, tk.END).split('\n')
-        # Stripping whitespace to identify truly empty lines
-        lines = [line.strip() for line in lines]
-
-        # This will be the real line in the editor to be highlighted
-        line_number = 0  # Start from the first line, considering tkinter's indexing
-        realCount = 0  # This will count non-empty/non-comment lines
-
-        for line in lines:
-            line_number += 1
-            if line and line[0] != ';':  # Consider the line if it's not empty and not a comment
-                realCount += 1
-            if realCount == self.SIM.program_counter+2:
-                break
-
+      
         # Remove any previous highlights
         self.code_editor.tag_remove("highlight", "1.0", "end")
         # Add highlight tag to the determined line
-        self.code_editor.tag_add("highlight", f"{line_number}.0", f"{line_number}.end")
-        self.code_editor.see(f"{line_number}.0")
+        self.code_editor.tag_add("highlight", f"{self.SIM.program_counter+1}.0", f"{self.SIM.program_counter+1}.end")
+        self.code_editor.see(f"{self.SIM.program_counter+1}.0")
 
 if __name__ == "__main__":
     root = tk.Tk()

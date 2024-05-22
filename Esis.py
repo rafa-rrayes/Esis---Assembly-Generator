@@ -25,6 +25,19 @@ class Assembler:
             raise Exception(f"Syntax error in line {linha}")
         return function
     def condicao(self, condicao):
+        """
+        Recebe uma condição e retorna o assembly para a comparação e o jmp
+        A comparação feita para os valores é feita apartir de uma subtração
+        onde o 1 valor é subtraido do segundo e o resultado é salvo em %D
+        EX:
+        X < 4
+        Salvamos X em D
+        Salvamos 4 em A
+        Subtraimos D de A e salvamos em D
+        ou seja D = X - 4
+
+        Como a comparação é um '<' menor, executamos o jmp se o valor de D for menor que 0
+        """
         linha = condicao
         assembly = ''
         if '==' in linha:
@@ -103,10 +116,10 @@ movw (%A), %A\n"""
         valor = content[1]
         endereco = self.getVariavel(nome)
         # if + or - or | or & in linha
-        if '+' in linha or '-' in linha:
-            return self.somaSub(linha)
-        elif '|' in linha or '&' in linha:
-            return self.orAnd(linha)
+        if '+' in linha or '-' in linha or '|' in linha or '&' in linha:
+            return self.Aritmetica(linha)
+        elif '!' in linha or '-' in linha:
+            return self.notNeg(linha)
         if valor.isdecimal():
             assembly = f"""leaw ${valor}, %A
 movw %A, %D
@@ -123,19 +136,26 @@ movw %D, (%A)\n"""
             else:
                 raise Exception(f"{valor} not found in memory")
             return assembly
-    def somaSub(self, linha):
+    def Aritmetica(self, linha):
         content = linha.replace(' ', '').split('=')
         nome = content[0]
+        salvarEm = self.getVariavel(nome)
+        assembly = ''
         if '+' in linha:
             sep = '+'
             comand = 'addw'
         elif '-' in linha:
             sep = '-'
             comand = 'subw'
+        if '|' in linha:
+            sep = '|'
+            comand = 'orw'
+        elif '&' in linha:
+            sep = '&'
+            comand = 'andw'
         primeiroValor = content[1].split(sep)[0]
         segundoValor = content[1].split(sep)[1]
-        salvarEm = self.getVariavel(nome)
-        assembly = ''
+        
         if segundoValor.isdecimal():
             assembly += f"""leaw ${segundoValor}, %A
 movw %A, %D\n"""
@@ -181,44 +201,8 @@ movw (%A), %D\n"""
         assembly += f"""{op} %D
 leaw ${salvarEm}, %A
 movw %D, (%A)\n"""
-        return assembly
-    def orAnd(self, linha):
-        content = linha.replace(' ', '').split('=')
-        letra = content[0]
-        salvarEm = self.getVariavel(letra)
-        operacao = content[1]
-        assembly = ''
-        if '|' in operacao:
-            op = 'orw'
-            simbolo = '|'
-        elif '&' in operacao:
-            op = 'andw'
-            simbolo = '&'
-        primeiroValor = operacao.split(simbolo)[0]
-        segundoValor = operacao.split(simbolo)[1]
-        if primeiroValor.isdecimal():
-            assembly += f"""leaw ${primeiroValor}, %A
-movw %A, %D"""
-        else:
-            if primeiroValor in self.variaveis:
-                end = self.getVariavel(primeiroValor)
-                assembly += f"""leaw ${end}, %A
-movw (%A), %D"""
-            else:
-                raise Exception(f"{primeiroValor} not found in memory")
-        if segundoValor.isdecimal():
-            assembly += f"""leaw ${segundoValor}, %A\n"""
-        else:
-            if segundoValor in self.variaveis:
-                end = self.getVariavel(segundoValor)
-                assembly += f"""leaw ${end}, %A
-movw (%A), %A"""
-            else:
-                raise Exception(f"{segundoValor} not found in memory")
-        assembly += f"""{op} %D, %A, %D
-leaw ${salvarEm}, %A
-movw %D, (%A)"""
-        return assembly
+        return assembly        
+    
     def whileStart(self, linha):
         self.whileNumber += 1
         self.functions.append(linha.strip()[6:][:-1].replace(' ', ''))
@@ -263,27 +247,7 @@ leaw ${func}, %A
 jmp
 nop
 ENDIF{func}:"""
-        return assembly
-
-    def callFunc(self, linha):
-        nome = linha[:-2]
-        assembly = f"""leaw $1024, %A
-movw (%A), %A
-movw %A, %D
-incw %D
-leaw $1024, %A
-movw %D, (%A)
-leaw $ENDCall{nome}, %A
-movw %A, %D
-leaw $1024, %A
-movw (%A), %A
-movw %D, (%A)
-leaw ${nome}, %A
-jmp
-nop
-ENDCall{nome}:"""
-
-        return assembly
+        return assembly    
     def DefFunc(self, linha):
         nome = linha[3:][:-1].strip()
         self.functions.append(nome+'()')
@@ -317,6 +281,24 @@ END{nome}:"""
             fim += f"leaw $WHILE{self.whileNumber}, %A\n"
             fim += jmp
         return fim
+    def callFunc(self, linha):
+        nome = linha[:-2]
+        assembly = f"""leaw $1024, %A
+movw (%A), %A
+movw %A, %D
+incw %D
+leaw $1024, %A
+movw %D, (%A)
+leaw $ENDCall{nome}, %A
+movw %A, %D
+leaw $1024, %A
+movw (%A), %A
+movw %D, (%A)
+leaw ${nome}, %A
+jmp
+nop
+ENDCall{nome}:"""
+        return assembly
     def parse2(self):
         codigo = self.code.split('\n')
         assembly = 'leaw $1024, %A\nmovw %A, (%A)\n'
@@ -330,41 +312,6 @@ END{nome}:"""
         return assembly
 
 
-codigoFatorial = """
-A = 5
-C = A -1 
-def fact{
-    while C > 1{
-        B = C
-        Copia = A
-        multi()
-        C = C-1
-    }
-}
-def multi{
-    while B > 1{
-        A = A+Copia
-        B = B-1
-    }
-}
-fact()
-"""
-codigoDivisao = """A = 10
-B = 2
-resultado = 0
-def sub1{
-    resultado = resultado -1
-}
-def divisao{
-    while A > 0{
-    A = A - B
-    resultado = resultado + 1
-    if A < 0: sub1
-    }
-}
-divisao()"""
-
-
 if __name__ == '__main__':
     assmbl = Assembler()
     import sys
@@ -374,6 +321,6 @@ if __name__ == '__main__':
         codigo = file.read()
     assmbl.addCode(codigo)
     texto = assmbl.parse2()
-    with open(f'{name}.nasm', 'w') as file:
+    with open(path.replace('.esis', '.nasm'), 'w') as file:
         file.write(texto)
     print('Arquivo gerado com sucesso')

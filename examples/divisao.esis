@@ -12,3 +12,4 @@ def divisao{
     }
 }
 divisao()
+R10 = resultado

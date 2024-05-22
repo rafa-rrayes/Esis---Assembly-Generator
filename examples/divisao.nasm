@@ -112,3 +112,7 @@ leaw $divisao, %A
 jmp
 nop
 ENDCalldivisao:
+leaw $3, %A
+movw (%A), %D
+leaw $10, %A
+movw %D, (%A)
