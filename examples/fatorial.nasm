@@ -1,5 +1,6 @@
 leaw $1024, %A
 movw %A, (%A)
+; Calcular fatorial de 6
 leaw $6, %A
 movw %A, %D
 leaw $1, %A
@@ -124,8 +125,9 @@ leaw $fact, %A
 jmp
 nop
 ENDCallfact:
+; Salvar resultado no endereço 0
 leaw $1, %A
 movw (%A), %D
-leaw $9, %A
+leaw $0, %A
 movw %D, (%A)
 

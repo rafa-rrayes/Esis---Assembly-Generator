@@ -89,7 +89,7 @@ movw (%A), %A\n"""
         self.code = code
     def getVariavel(self, nome):
         if nome not in self.variaveis.keys():
-            if re.fullmatch(r'^R[1-9][0-9]*$', nome):
+            if re.fullmatch(r'^R[1-9][0-9]*$', nome) or nome == 'R0':
                 endereco = int(nome[1:])
                 if endereco in self.variaveis.values():
                     raise Exception(f"Endereço {endereco} já está sendo utilizado")

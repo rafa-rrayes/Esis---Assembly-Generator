@@ -1,10 +1,12 @@
 leaw $1024, %A
 movw %A, (%A)
-leaw $10, %A
+; dividendo = 216
+leaw $216, %A
 movw %A, %D
 leaw $1, %A
 movw %D, (%A)
-leaw $2, %A
+; divisor = 6
+leaw $6, %A
 movw %A, %D
 leaw $2, %A
 movw %D, (%A)
@@ -112,8 +114,9 @@ leaw $divisao, %A
 jmp
 nop
 ENDCalldivisao:
+; salvar resultado em R0
 leaw $3, %A
 movw (%A), %D
-leaw $10, %A
+leaw $0, %A
 movw %D, (%A)
 

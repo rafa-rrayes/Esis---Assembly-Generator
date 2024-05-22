@@ -1,5 +1,5 @@
-A = 10
-B = 2
+A = 10 # dividendo = 10
+B = 2 # divisor = 2
 resultado = 0
 def sub1{
     resultado = resultado -1
@@ -8,8 +8,8 @@ def divisao{
     while A > 0{
     A = A - B
     resultado = resultado + 1
-    if A < 0: sub1
+    if A < 0: sub1 
     }
 }
 divisao()
-R10 = resultado
+R0 = resultado # salvar resultado em R0
