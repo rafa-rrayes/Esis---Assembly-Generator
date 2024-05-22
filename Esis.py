@@ -1,261 +1,256 @@
 import re
-variaveis = {}
-lastCallback = [1023]
-whileNumber = 0
+class Assembler:
+    def __init__(self) -> None:
+        self.variaveis = {}
+        self.lastCallback = [1023]
+        self.whileNumber = 0
+        self.functions = []
+        self.lineNumber = 1
 
-def getVariavel(nome):
-    if nome not in variaveis.keys():
-        if re.fullmatch(r'^R[1-9][0-9]*$', nome):
-            endereco = int(nome[1:])
-            if endereco in variaveis.values():
-                raise Exception(f"Endereço {endereco} já está sendo utilizado")
-        elif len(list(variaveis.values())) >= 1:
-            endereco = list(variaveis.values())[-1] + 1
-            while endereco in variaveis.values():
-                endereco+=1
+
+    def idLine(self, linha):
+        if linha.startswith('while') and linha.endswith('{'):
+            function = self.whileStart
+        elif linha.startswith('if') and ':' in linha:
+            function = self.ifStatement
+        elif linha.startswith('def') and '{' in linha:
+            function = self.DefFunc
+        elif linha.endswith('()'):
+            function = self.callFunc
+        elif '=' in linha:
+            function = self.setVariavel
+        elif linha == '}':
+            function = self.EndFunc
         else:
-            endereco = 1
-        variaveis[nome] = endereco
-    else:
-        endereco = variaveis[nome]
-    return endereco
-def setVariavel(linha):
-    assembly = ''
-    content = linha.replace(' ', '').split('=')
-    nome = content[0]
-    valor = content[1]
-    endereco = getVariavel(nome)
-    if valor.isdecimal():
-        assembly = f"""leaw ${valor}, %A
+            raise Exception(f"Syntax error in line {linha}")
+        return function
+    def condicao(self, condicao):
+        linha = condicao
+        assembly = ''
+        if '==' in linha:
+            op = '=='
+        elif '>=' in linha:
+            op = '>='
+        elif '>' in linha:
+            op = '>'
+        elif '<=' in linha:
+            op = '<='
+        elif '<' in linha:
+            op = '<'
+        elif '!=' in linha:
+            op = '!='
+        
+        primeiroValor = linha.split(op)[0]
+        segundoValor = linha.split(op)[1]
+
+        if primeiroValor.isdecimal():
+            assembly += f"""leaw ${primeiroValor}, %A
+movw %A, %D\n"""
+        else:
+            if primeiroValor in self.variaveis:
+                end = self.getVariavel(primeiroValor)
+                assembly += f"""leaw ${end}, %A
+movw (%A), %D\n"""
+            else:
+                raise Exception(f"{primeiroValor} not found in memory")
+        if segundoValor.isdecimal():
+            assembly += f"""leaw ${segundoValor}, %A\n"""
+        else:
+            if segundoValor in self.variaveis:
+                end = self.getVariavel(segundoValor)
+                assembly += f"""leaw ${end}, %A
+movw (%A), %A\n"""
+            else:
+                raise Exception(f"{segundoValor} not found in memory")
+        assembly += "subw %D, %A, %D"
+
+        if op == '==':
+            jmp = "je %D\nnop\n"
+        if op == '!=':
+            jmp = "jne %D\nnop\n"
+        if op == '>':
+            jmp = "jg %D\nnop\n"
+        if op == '>=':
+            jmp = "jge %D\nnop\n"
+        if op == '<':
+            jmp = "jl %D\nnop\n"
+        if op == '<=':
+            jmp = "jle %D\nnop\n"
+        return assembly, jmp
+    def addCode(self, code):
+        self.code = code
+    def getVariavel(self, nome):
+        if nome not in self.variaveis.keys():
+            if re.fullmatch(r'^R[1-9][0-9]*$', nome):
+                endereco = int(nome[1:])
+                if endereco in self.variaveis.values():
+                    raise Exception(f"Endereço {endereco} já está sendo utilizado")
+            elif len(list(self.variaveis.values())) >= 1:
+                endereco = list(self.variaveis.values())[-1] + 1
+                while endereco in self.variaveis.values():
+                    endereco+=1
+            else:
+                endereco = 1
+            self.variaveis[nome] = endereco
+        else:
+            endereco = self.variaveis[nome]
+        return endereco
+    def setVariavel(self, linha):
+
+        assembly = ''
+        content = linha.replace(' ', '').split('=')
+        nome = content[0]
+        valor = content[1]
+        endereco = self.getVariavel(nome)
+        # if + or - or | or & in linha
+        if '+' in linha or '-' in linha:
+            return self.somaSub(linha)
+        elif '|' in linha or '&' in linha:
+            return self.orAnd(linha)
+        if valor.isdecimal():
+            assembly = f"""leaw ${valor}, %A
 movw %A, %D
 leaw ${endereco}, %A
 movw %D, (%A)\n"""
-        return assembly
-    else:
-        if valor in variaveis:
-            serCopiado = variaveis[valor]
-            assembly += f"""leaw ${serCopiado}, %A
+            return assembly
+        else:
+            if valor in self.variaveis:
+                serCopiado = self.variaveis[valor]
+                assembly += f"""leaw ${serCopiado}, %A
 movw (%A), %D
 leaw ${endereco}, %A
 movw %D, (%A)\n"""
-        else:
-            raise Exception(f"{valor} not found in memory")
-        return assembly
-def somaSub(linha):
-    content = linha.replace(' ', '').split('=')
-    nome = content[0]
-    if '+' in linha:
-        sep = '+'
-        comand = 'addw'
-    elif '-' in linha:
-        sep = '-'
-        comand = 'subw'
-    primeiroValor = content[1].split(sep)[0]
-    segundoValor = content[1].split(sep)[1]
-    salvarEm = getVariavel(nome)
-    assembly = ''
-    if segundoValor.isdecimal():
-        assembly += f"""leaw ${segundoValor}, %A
+            else:
+                raise Exception(f"{valor} not found in memory")
+            return assembly
+    def somaSub(self, linha):
+        content = linha.replace(' ', '').split('=')
+        nome = content[0]
+        if '+' in linha:
+            sep = '+'
+            comand = 'addw'
+        elif '-' in linha:
+            sep = '-'
+            comand = 'subw'
+        primeiroValor = content[1].split(sep)[0]
+        segundoValor = content[1].split(sep)[1]
+        salvarEm = self.getVariavel(nome)
+        assembly = ''
+        if segundoValor.isdecimal():
+            assembly += f"""leaw ${segundoValor}, %A
 movw %A, %D\n"""
-    else:
-        if segundoValor not in variaveis:
-            raise Exception(f"{segundoValor} not found in memory")
-        endereco = variaveis[segundoValor]
-        assembly += f"""leaw ${endereco}, %A
+        else:
+            if segundoValor not in self.variaveis:
+                raise Exception(f"{segundoValor} not found in memory")
+            endereco = self.variaveis[segundoValor]
+            assembly += f"""leaw ${endereco}, %A
 movw (%A), %D\n"""
-    if primeiroValor.isdecimal():
-        assembly += f"leaw ${primeiroValor}, %A\n"
-    else:
-        if primeiroValor not in variaveis:
-            raise Exception(f"{primeiroValor} not found in memory")
-        endereco = variaveis[primeiroValor]
-        assembly += f"""leaw ${endereco}, %A
+        if primeiroValor.isdecimal():
+            assembly += f"leaw ${primeiroValor}, %A\n"
+        else:
+            if primeiroValor not in self.variaveis:
+                raise Exception(f"{primeiroValor} not found in memory")
+            endereco = self.variaveis[primeiroValor]
+            assembly += f"""leaw ${endereco}, %A
 movw (%A), %A\n"""
-    assembly += f"""{comand} %A, %D, %D
+        assembly += f"""{comand} %A, %D, %D
 leaw ${salvarEm}, %A
 movw %D, (%A)\n"""
-    return assembly
-def notNeg(linha):
-    content = linha.replace(' ', '').split('=')
-    letra = content[0]
-    salvarEm = getVariavel(letra)
-    operacao = content[1]
-    operar = operacao[1:]
-    assembly = ''
-    if '!' in operacao:
-        op = 'notw'
-    elif '-' in operacao:
-        op = 'negw'
-    if operar.isdecimal():
-        assembly += f"""leaw ${operar}, %A
+        return assembly
+    def notNeg(self, linha):
+        content = linha.replace(' ', '').split('=')
+        letra = content[0]
+        salvarEm = self.getVariavel(letra)
+        operacao = content[1]
+        operar = operacao[1:]
+        assembly = ''
+        if '!' in operacao:
+            op = 'notw'
+        elif '-' in operacao:
+            op = 'negw'
+        if operar.isdecimal():
+            assembly += f"""leaw ${operar}, %A
 movw %A, %D\n"""
-    else:
-        if operar in variaveis:
-            end = getVariavel(operar)
-            assembly += f"""leaw ${end}, %A
-movw (%A), %D\n"""
         else:
-            raise Exception(f"{operar} not found in memory")
-    assembly += f"""{op} %D
+            if operar in self.variaveis:
+                end = self.getVariavel(operar)
+                assembly += f"""leaw ${end}, %A
+movw (%A), %D\n"""
+            else:
+                raise Exception(f"{operar} not found in memory")
+        assembly += f"""{op} %D
 leaw ${salvarEm}, %A
 movw %D, (%A)\n"""
-    return assembly
-    
-  
-def orAnd(linha):
-    content = linha.replace(' ', '').split('=')
-    letra = content[0]
-    salvarEm = getVariavel(letra)
-    operacao = content[1]
-    assembly = ''
-    if '|' in operacao:
-        op = 'orw'
-        simbolo = '|'
-    elif '&' in operacao:
-        op = 'andw'
-        simbolo = '&'
-    primeiroValor = operacao.split(simbolo)[0]
-    segundoValor = operacao.split(simbolo)[1]
-    if primeiroValor.isdecimal():
-        assembly += f"""leaw ${primeiroValor}, %A
+        return assembly
+    def orAnd(self, linha):
+        content = linha.replace(' ', '').split('=')
+        letra = content[0]
+        salvarEm = self.getVariavel(letra)
+        operacao = content[1]
+        assembly = ''
+        if '|' in operacao:
+            op = 'orw'
+            simbolo = '|'
+        elif '&' in operacao:
+            op = 'andw'
+            simbolo = '&'
+        primeiroValor = operacao.split(simbolo)[0]
+        segundoValor = operacao.split(simbolo)[1]
+        if primeiroValor.isdecimal():
+            assembly += f"""leaw ${primeiroValor}, %A
 movw %A, %D"""
-    else:
-        if primeiroValor in variaveis:
-            end = getVariavel(primeiroValor)
-            assembly += f"""leaw ${end}, %A
+        else:
+            if primeiroValor in self.variaveis:
+                end = self.getVariavel(primeiroValor)
+                assembly += f"""leaw ${end}, %A
 movw (%A), %D"""
+            else:
+                raise Exception(f"{primeiroValor} not found in memory")
+        if segundoValor.isdecimal():
+            assembly += f"""leaw ${segundoValor}, %A\n"""
         else:
-            raise Exception(f"{primeiroValor} not found in memory")
-    if segundoValor.isdecimal():
-        assembly += f"""leaw ${segundoValor}, %A\n"""
-    else:
-        if segundoValor in variaveis:
-            end = getVariavel(segundoValor)
-            assembly += f"""leaw ${end}, %A
+            if segundoValor in self.variaveis:
+                end = self.getVariavel(segundoValor)
+                assembly += f"""leaw ${end}, %A
 movw (%A), %A"""
-        else:
-            raise Exception(f"{segundoValor} not found in memory")
-    assembly += f"""{op} %D, %A, %D
+            else:
+                raise Exception(f"{segundoValor} not found in memory")
+        assembly += f"""{op} %D, %A, %D
 leaw ${salvarEm}, %A
 movw %D, (%A)"""
-    return assembly
-
-def whileStart(whileNumber):
-    inicio = f"""leaw $ENDWHILE{whileNumber}, %A
+        return assembly
+    def whileStart(self, linha):
+        self.whileNumber += 1
+        self.functions.append(linha.strip()[6:][:-1].replace(' ', ''))
+        inicio = f"""leaw $ENDWHILE{self.whileNumber}, %A
 jmp
-WHILE{whileNumber}:
-""" 
-    return inicio
-def whileEnd(linha, whileNumber):
-    condicao = linha[6:][:-1]
-    if '==' in condicao:
-        op = '=='
-    elif '>=' in condicao:
-        op = '>='
-    elif '>' in condicao:
-        op = '>'
-    elif '<=' in condicao:
-        op = '<='
-    elif '<' in condicao:
-        op = '<'
-    elif '!=' in condicao:
-        op = '!='
-    condicao = condicao.replace(' ', '')
-    primeiroValor, segundoValor = condicao.split(op)
-    fim = f'ENDWHILE{whileNumber}:\n'
-    if primeiroValor.isdecimal():
-        fim += f"""leaw ${primeiroValor}, %A
-movw %A, %D\n"""
-    else:
-        if primeiroValor in variaveis:
+WHILE{self.whileNumber}:""" 
+        return inicio
+    def ifStatement(self, linha):
+        assembly = ''
+        linha = linha.replace(' ', '')
+        ind = linha.index(':')
+        func = linha[ind+1:]
+        linha = linha[:ind]
+        condicao = linha.replace('if', '')
+        if '==' in condicao:
+            condicao = condicao.replace('==', '!=')
+        elif '!=' in condicao:
+            condicao = condicao.replace('!=', '==')
+        elif '>=' in condicao:
+            condicao = condicao.replace('>=', '<')
+        elif '<=' in condicao:
+            condicao = condicao.replace('<=', '>')
+        elif '>' in condicao:
+            condicao = condicao.replace('>', '<=')
+        elif '<' in condicao:
+            condicao = condicao.replace('<', '>=')
+        prepare, jmp = self.condicao(condicao)
 
-            end = getVariavel(primeiroValor)
-            fim += f"""leaw ${end}, %A
-movw (%A), %D\n"""
-        else:
-
-            raise Exception(f"{primeiroValor} not found in memory")
-    if segundoValor.isdecimal():
-        fim += f"""leaw ${segundoValor}, %A\n"""
-    else:
-        if segundoValor in variaveis:
-            end = getVariavel(segundoValor)
-            fim += f"""leaw ${end}, %A
-movw (%A), %A\n"""
-        else:
-            raise Exception(f"{segundoValor} not found in memory")
-    fim += f"""subw %D, %A, %D
-leaw $WHILE{whileNumber}, %A\n"""
-    if op == '==':
-        fim += "je %D\nnop\n"
-    if op == '!=':
-        fim += "jne %D\nnop\n"
-    if op == '>':
-        fim += "jg %D\nnop\n"
-    if op == '>=':
-        fim += "jge %D\nnop\n"
-    if op == '<':
-        fim += "jl %D\nnop\n"
-    if op == '<=':
-        fim += "jle %D\nnop\n"
-    return fim
-def ifStatement(linha):
-    assembly = ''
-    linha = linha.replace(' ', '')
-    ind = linha.index(':')
-    func = linha[ind+1:]
-    linha = linha[:ind]
-    linha = linha.replace('if', '')
-    if '==' in linha:
-        op = '=='
-    elif '>=' in linha:
-        op = '>='
-    elif '>' in linha:
-        op = '>'
-    elif '<=' in linha:
-        op = '<='
-    elif '<' in linha:
-        op = '<'
-    elif '!=' in linha:
-        op = '!='
-    
-    primeiroValor = linha.split(op)[0]
-    segundoValor = linha.split(op)[1]
-    
-    if primeiroValor.isdecimal():
-        assembly += f"""leaw ${primeiroValor}, %A
-movw %A, %D\n"""
-    else:
-        if primeiroValor in variaveis:
-            end = getVariavel(primeiroValor)
-            assembly += f"""leaw ${end}, %A
-movw (%A), %D\n"""
-        else:
-            raise Exception(f"{primeiroValor} not found in memory")
-    if segundoValor.isdecimal():
-        assembly += f"""leaw ${segundoValor}, %A\n"""
-    else:
-        if segundoValor in variaveis:
-            end = getVariavel(segundoValor)
-            assembly += f"""leaw ${end}, %A
-movw (%A), %A\n"""
-        else:
-            raise Exception(f"{segundoValor} not found in memory")
-    assembly += f"""subw %D, %A, %D
-leaw $ENDIF{func}, %A\n"""
-    if op == '==':
-        assembly += "jne %D\nnop\n"
-    if op == '!=':
-        assembly += "je %D\nnop\n"
-    if op == '>':
-        assembly += "jle %D\nnop\n"
-    if op == '>=':
-        assembly += "jl %D\nnop\n"
-    if op == '<':
-        assembly += "jge %D\nnop\n"
-    if op == '<=':
-        assembly += "jg %D\nnop\n"
-    assembly += f"""leaw $1024, %A
+        assembly += prepare+'\n'
+        assembly+= f"leaw $ENDIF{func}, %A\n"
+        assembly += jmp +'\n'
+        assembly += f"""leaw $1024, %A
 movw (%A), %D
 incw %D
 movw %D, (%A)
@@ -268,17 +263,16 @@ leaw ${func}, %A
 jmp
 nop
 ENDIF{func}:"""
-    return assembly
+        return assembly
 
-def callFunc(linha):
-    nome = linha[:-2]
-    assembly = f"""leaw $1024, %A
+    def callFunc(self, linha):
+        nome = linha[:-2]
+        assembly = f"""leaw $1024, %A
 movw (%A), %A
 movw %A, %D
 incw %D
 leaw $1024, %A
 movw %D, (%A)
-
 leaw $ENDCall{nome}, %A
 movw %A, %D
 leaw $1024, %A
@@ -289,18 +283,20 @@ jmp
 nop
 ENDCall{nome}:"""
 
-    return assembly
-def DefFunc(nome):
-    inicio = f"""
-leaw $END{nome}, %A
+        return assembly
+    def DefFunc(self, linha):
+        nome = linha[3:][:-1].strip()
+        self.functions.append(nome+'()')
+        inicio = f"""leaw $END{nome}, %A
 jmp
 nop
-{nome}:
-"""
-    
-    return inicio
-def EndFunc(nome):
-    fim = f"""leaw $1024, %A
+{nome}:"""
+        return inicio
+    def EndFunc(self, linha):
+        if '()' in self.functions[-1]:
+            nome = self.functions[-1][:-2]
+            self.functions.pop()
+            fim = f"""leaw $1024, %A
 movw (%A), %A
 movw %A, %D
 decw %D
@@ -311,56 +307,27 @@ movw %D, %A
 movw (%A), %A
 jmp
 nop
-END{nome}:
-"""
-    return fim
-def parse(codigo):
-    funcoes = []
-    whileNumber = 0
-    codigo = codigo.split('\n')
-    last = []
-    assembly = 'leaw $1024, %A\nmovw %A, (%A)\n'
-    for i in range (len(codigo)):
-        linha = codigo[i].strip()
-        if 'if' in linha and ':' in linha:
-            function = ifStatement
-        elif '=' in linha and ('+' in linha or '-' in linha):
-            function = somaSub
-        elif '=' in linha and ('&' in linha or '|' in linha):
-            function = orAnd
-        elif '=' in linha and ('-' in linha or '!' in linha):
-            function = notNeg
-        elif '=' in linha:
-            function = setVariavel     
-        elif '()' in linha:
-            function = callFunc
-        elif linha.startswith('def '):
-            nome = linha[3:][:-1].strip()            
-            funcoes.append(nome)
-            assembly+= DefFunc(nome) +'\n'
-            last.append('funcao')
-            continue
-        elif linha.startswith('while '):
-            whileNumber += 1
-            assembly += whileStart(whileNumber)
-            funcoes.append(linha)
-            last.append('while')
-            continue
-        elif linha.strip() == '}':
-            if last[-1] == 'funcao':
-                assembly += EndFunc(funcoes[-1])
-                funcoes.pop()
-                last.pop()
-            elif last[-1] == 'while':
-                assembly += whileEnd(funcoes[-1], whileNumber)
-                funcoes.pop()
-                last.pop()
-            continue
-        elif linha.strip() == '':
-            continue
-        
-        assembly+= function(linha) +'\n'
-    return assembly
+END{nome}:"""
+        else:
+            condicao = self.functions[-1]
+            self.functions.pop()
+            fim = f'ENDWHILE{self.whileNumber}:\n'
+            prepare, jmp = self.condicao(condicao)
+            fim += prepare + '\n'
+            fim += f"leaw $WHILE{self.whileNumber}, %A\n"
+            fim += jmp
+        return fim
+    def parse2(self):
+        codigo = self.code.split('\n')
+        assembly = 'leaw $1024, %A\nmovw %A, (%A)\n'
+        for linha in codigo:
+            linha = linha.strip()
+            if linha== '':
+                continue
+            function = self.idLine(linha)
+            assembly += function(linha).strip() + '\n'
+        assembly.replace('\t', '')
+        return assembly
 
 
 codigoFatorial = """
@@ -382,8 +349,7 @@ def multi{
 }
 fact()
 """
-codigoDivisao = """
-A = 10
+codigoDivisao = """A = 10
 B = 2
 resultado = 0
 def sub1{
@@ -396,15 +362,18 @@ def divisao{
     if A < 0: sub1
     }
 }
-divisao()
-"""
+divisao()"""
+
+
 if __name__ == '__main__':
+    assmbl = Assembler()
     import sys
     path = sys.argv[1]
     name = path.split('/')[-1].split('.')[0]
     with open(path, 'r') as file:
         codigo = file.read()
-    texto = parse(codigo)
+    assmbl.addCode(codigo)
+    texto = assmbl.parse2()
     with open(f'{name}.nasm', 'w') as file:
         file.write(texto)
     print('Arquivo gerado com sucesso')

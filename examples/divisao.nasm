@@ -4,23 +4,18 @@ leaw $10, %A
 movw %A, %D
 leaw $1, %A
 movw %D, (%A)
-
 leaw $2, %A
 movw %A, %D
 leaw $2, %A
 movw %D, (%A)
-
 leaw $0, %A
 movw %A, %D
 leaw $3, %A
 movw %D, (%A)
-
-
 leaw $ENDsub1, %A
 jmp
 nop
 sub1:
-
 leaw $1, %A
 movw %A, %D
 leaw $3, %A
@@ -28,7 +23,6 @@ movw (%A), %A
 subw %A, %D, %D
 leaw $3, %A
 movw %D, (%A)
-
 leaw $1024, %A
 movw (%A), %A
 movw %A, %D
@@ -41,12 +35,10 @@ movw (%A), %A
 jmp
 nop
 ENDsub1:
-
 leaw $ENDdivisao, %A
 jmp
 nop
 divisao:
-
 leaw $ENDWHILE1, %A
 jmp
 WHILE1:
@@ -57,7 +49,6 @@ movw (%A), %A
 subw %A, %D, %D
 leaw $1, %A
 movw %D, (%A)
-
 leaw $1, %A
 movw %A, %D
 leaw $3, %A
@@ -65,7 +56,6 @@ movw (%A), %A
 addw %A, %D, %D
 leaw $3, %A
 movw %D, (%A)
-
 leaw $1, %A
 movw (%A), %D
 leaw $0, %A
@@ -73,6 +63,7 @@ subw %D, %A, %D
 leaw $ENDIFsub1, %A
 jge %D
 nop
+
 leaw $1024, %A
 movw (%A), %D
 incw %D
@@ -112,7 +103,6 @@ movw %A, %D
 incw %D
 leaw $1024, %A
 movw %D, (%A)
-
 leaw $ENDCalldivisao, %A
 movw %A, %D
 leaw $1024, %A

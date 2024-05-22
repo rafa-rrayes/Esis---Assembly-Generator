@@ -1,0 +1,17 @@
+A = 5
+C = A -1 
+def fact{
+    while C > 1{
+        B = C
+        Copia = A
+        multi()
+        C = C-1
+    }
+}
+def multi{
+    while B > 1{
+        A = A+Copia
+        B = B-1
+    }
+}
+fact()
