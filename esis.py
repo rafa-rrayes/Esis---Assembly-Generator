@@ -16,6 +16,7 @@ class Assembler:
         elif linha == '}':
             function = self.EndFunc
         else:
+            print(linha)
             raise Exception(f"Syntax error in line {linha}")
         return function
     def condicao(self, condicao):
@@ -293,7 +294,7 @@ jmp
 nop
 ENDCall{nome}:"""
         return assembly
-    def parse(self):
+    def parse(self, includeComent = False):
         self.variaveis = {}
         self.lastCallback = [1023]
         self.whileNumber = 0
@@ -302,11 +303,16 @@ ENDCall{nome}:"""
         codigo = self.code.split('\n')
         assembly = 'leaw $1024, %A\nmovw %A, (%A)\n'
         for linha in codigo:
-            linha = re.sub(r'#.*', '', linha).strip()
-            if linha== '':
-                continue
-            function = self.idLine(linha)
-            assembly += function(linha).strip() + '\n'
+            comentario = ''
+            if '#' in linha:
+                comentario = ''.join(linha.split("#")[1:])
+                linha = linha.split('#')[0]
+            linha = linha.strip()
+            if comentario != '' and includeComent:
+                assembly += ';' + comentario + '\n'
+            if linha != '':
+                function = self.idLine(linha)
+                assembly += function(linha).strip() + '\n'
         assembly.replace('\t', '')
         return assembly
 
@@ -315,11 +321,14 @@ if __name__ == '__main__':
     assmbl = Assembler()
     import sys
     path = sys.argv[1]
+    includeComment = False
+    if sys.argv[2] and sys.argv[2].lower() == 'includecomment':
+        includeComment = True
     name = path.split('/')[-1].split('.')[0]
     with open(path, 'r') as file:
         codigo = file.read()
     assmbl.addCode(codigo)
-    texto = assmbl.parse2()
+    texto = assmbl.parse(includeComment)
     with open(path.replace('.esis', '.nasm'), 'w') as file:
         file.write(texto)
     print('Arquivo gerado com sucesso')

@@ -113,7 +113,7 @@ class AssemblySimulatorGUI:
     def translate(self):
         
         self.assembler.addCode(self.code_editor.text.get(1.0, tk.END))
-        self.assembly = self.assembler.parse()
+        self.assembly = self.assembler.parse(includeComent=True)
         self.codeViwer.text.config(state='normal')
         self.codeViwer.text.delete(1.0, tk.END)
         self.codeViwer.text.insert(tk.END, self.assembly)

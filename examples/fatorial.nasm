@@ -1,6 +1,6 @@
 leaw $1024, %A
 movw %A, (%A)
-leaw $5, %A
+leaw $6, %A
 movw %A, %D
 leaw $1, %A
 movw %D, (%A)
@@ -124,3 +124,8 @@ leaw $fact, %A
 jmp
 nop
 ENDCallfact:
+leaw $1, %A
+movw (%A), %D
+leaw $9, %A
+movw %D, (%A)
+
