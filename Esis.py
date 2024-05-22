@@ -1,10 +1,15 @@
-
+import re
 variaveis = {}
 lastCallback = [1023]
 whileNumber = 0
+
 def getVariavel(nome):
     if nome not in variaveis.keys():
-        if len(list(variaveis.values())) >= 1:
+        if re.fullmatch(r'^R[1-9][0-9]*$', nome):
+            endereco = int(nome[1:])
+            if endereco in variaveis.values():
+                raise Exception(f"Endereço {endereco} já está sendo utilizado")
+        elif len(list(variaveis.values())) >= 1:
             endereco = list(variaveis.values())[-1] + 1
             while endereco in variaveis.values():
                 endereco+=1
@@ -163,10 +168,8 @@ def whileEnd(linha, whileNumber):
 movw %A, %D\n"""
     else:
         if primeiroValor in variaveis:
-            print(variaveis)
-            print(primeiroValor)
+
             end = getVariavel(primeiroValor)
-            print(end)
             fim += f"""leaw ${end}, %A
 movw (%A), %D\n"""
         else:
@@ -345,12 +348,10 @@ def parse(codigo):
             continue
         elif linha.strip() == '}':
             if last[-1] == 'funcao':
-                print(linha, 'func')
                 assembly += EndFunc(funcoes[-1])
                 funcoes.pop()
                 last.pop()
             elif last[-1] == 'while':
-                print(linha, 'while')
                 assembly += whileEnd(funcoes[-1], whileNumber)
                 funcoes.pop()
                 last.pop()
@@ -397,6 +398,13 @@ def divisao{
 }
 divisao()
 """
-texto = parse(codigoFatorial)
-with open('fatorial.esis', 'w') as file:
-    file.write(texto)
+if __name__ == '__main__':
+    import sys
+    path = sys.argv[1]
+    name = path.split('/')[-1].split('.')[0]
+    with open(path, 'r') as file:
+        codigo = file.read()
+    texto = parse(codigo)
+    with open(f'{name}.nasm', 'w') as file:
+        file.write(texto)
+    print('Arquivo gerado com sucesso')
