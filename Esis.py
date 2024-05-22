@@ -299,7 +299,7 @@ jmp
 nop
 ENDCall{nome}:"""
         return assembly
-    def parse2(self):
+    def parse(self):
         codigo = self.code.split('\n')
         assembly = 'leaw $1024, %A\nmovw %A, (%A)\n'
         for linha in codigo:
@@ -307,6 +307,7 @@ ENDCall{nome}:"""
             if linha== '':
                 continue
             function = self.idLine(linha)
+            print(linha)
             assembly += function(linha).strip() + '\n'
         assembly.replace('\t', '')
         return assembly
