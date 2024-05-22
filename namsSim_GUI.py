@@ -38,14 +38,22 @@ class AssemblySimulatorGUI:
         self.infos = tk.Frame(self.tabSim)
         self.infos.pack(expand=True, fill='both', side=tk.TOP)
         # RAM list
-        self.ram_view = tk.Listbox(self.infos, height=10, width=45)
+        self.ram_view = tk.Listbox(self.infos, height=10, width=10)
+        
         self.ram_view.pack(side=tk.LEFT, fill='both', expand=True)
+        
+        self.ram_viewBin = tk.Listbox(self.infos, height=10, width=25)
+        self.ram_viewBin.pack(side=tk.LEFT, fill='both', expand=True)
 
         # Registers
         self.infosRight = tk.Frame(self.infos)
         self.infosRight.pack(side=tk.LEFT, fill='both', expand=True)
-        self.regsList = tk.Listbox(self.infosRight, height=2, width=30)
-        self.regsList.pack(side=tk.TOP, fill='x', expand=False)
+        self.infoRegs = tk.Label(self.infosRight, text="Registers")
+        self.regsList = tk.Listbox(self.infoRegs, height=2, width=15)
+        self.regsList.pack(side=tk.LEFT, fill='x', expand=True)
+        self.regsListBin = tk.Listbox(self.infoRegs, height=2, width=20)
+        self.regsListBin.pack(side=tk.LEFT, fill='x', expand=True)
+        self.infoRegs.pack(side=tk.TOP, fill='x')
 
         self.clockCycles = tk.Label(self.infosRight, text="Clock Cycles: 0")
         self.clockCycles.pack(side=tk.TOP)
@@ -68,9 +76,9 @@ class AssemblySimulatorGUI:
         self.parseButton = tk.Button(self.buttonsEsis, text="Translate", command=self.translate)
         self.parseButton.pack(side=tk.LEFT)
     
-        self.save_button = tk.Button(self.buttonsEsis, text="Save", command=self.saveAssembly)
+        self.save_button = tk.Button(self.buttonsEsis, text="Save File", command=self.saveAssembly)
         self.save_button.pack(side=tk.LEFT)
-        self.send_button = tk.Button(self.buttonsEsis, text="Send", command=self.sendAssembly)
+        self.send_button = tk.Button(self.buttonsEsis, text="Translate and Send", command=self.sendAssembly)
         self.send_button.pack(side=tk.LEFT)
         self.buttonsEsis.pack(side=tk.TOP)
 
@@ -79,9 +87,12 @@ class AssemblySimulatorGUI:
         self.codeViwer.text.config(state='disabled')
         self.codeViwer.pack(expand=True, fill='both')
         self.assembly = ''
+        self.ram_view.config(yscrollcommand=self.sync_scroll)
+        self.ram_viewBin.config(yscrollcommand=self.sync_scroll)
     def translate(self):
+        
         self.assembler.addCode(self.code_editor.text.get(1.0, tk.END))
-        self.assembly = self.assembler.parse()
+        
         self.codeViwer.text.config(state='normal')
         self.codeViwer.text.delete(1.0, tk.END)
         self.codeViwer.text.insert(tk.END, self.assembly)
@@ -93,6 +104,8 @@ class AssemblySimulatorGUI:
             with open(file_path, "w") as file:
                 file.write(self.assembly)
     def sendAssembly(self):
+        self.assembler.addCode(self.code_editor.text.get(1.0, tk.END))
+        self.assembly = self.assembler.parse()
         self.notebook.select(0)
         self.code_editor.text.delete(1.0, tk.END)
         self.code_editor.text.insert(tk.END, self.assembly)
@@ -128,16 +141,33 @@ class AssemblySimulatorGUI:
         self.update_ram()
         self.highlight_line()
         self.clockCycles.config(text=f"Clock Cycles: {self.SIM.clockCycles}")
+    def sync_scroll(self,*args):
+        self.ram_viewBin.yview('moveto', args[0])
+        self.ram_view.yview('moveto', args[0])
+        
 
     def update_ram(self):
         self.ram_view.delete(0, tk.END)  # Clear the Listbox
+        self.ram_viewBin.delete(0, tk.END)
         for i, value in enumerate(self.SIM.memoria):
-            self.ram_view.insert(tk.END, f'R{i}: {value}                                           {value:016b}')
+            self.ram_view.insert(tk.END, f'R{i}:  {value}')
+            try:
+                self.ram_viewBin.insert(tk.END, f'Binario:  {int(value):016b}')
+            except:
+                self.ram_viewBin.insert(tk.END, f'Binario:  {value}')
         self.regsList.delete(0, tk.END)
-        self.regsList.insert(tk.END, f'%A: {self.SIM.registers["%A"]}               binary: {self.SIM.registers["%A"]:016b}')
-        self.regsList.insert(tk.END, f'%D: {self.SIM.registers["%D"]}               binary: {self.SIM.registers["%D"]:016b}')
+        self.regsList.insert(tk.END, f'%A: {self.SIM.registers["%A"]}')
+        try:
+            self.regsListBin.insert(tk.END, f'Binario:  {int(self.SIM.registers["%A"]):016b}')
+        except:
+            self.regsListBin.insert(tk.END, f'Binario:  {self.SIM.registers["%A"]}')
+        self.regsList.insert(tk.END, f'%D: {self.SIM.registers["%D"]}')
+        try:
+            self.regsListBin.insert(tk.END, f'Binario:  {int(self.SIM.registers["%D"]):016b}')
+        except:
+            self.regsListBin.insert(tk.END, f'Binario:  {self.SIM.registers["%D"]}')
     def load_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+        file_path = filedialog.askopenfilename(filetypes=[("esis files", "*.esis"), ("All files", "*.*")])
         if file_path:
             with open(file_path, "r") as file:
                 self.code_editor.text.delete(1.0, tk.END)
@@ -162,4 +192,5 @@ class AssemblySimulatorGUI:
 if __name__ == "__main__":
     root = tk.Tk()
     app = AssemblySimulatorGUI(root)
+    root.geometry("800x600")
     root.mainloop()
