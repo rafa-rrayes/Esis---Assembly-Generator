@@ -1,13 +1,7 @@
 import re
 class Assembler:
     def __init__(self) -> None:
-        self.variaveis = {}
-        self.lastCallback = [1023]
-        self.whileNumber = 0
-        self.functions = []
-        self.lineNumber = 1
-
-
+        pass
     def idLine(self, linha):
         if linha.startswith('while') and linha.endswith('{'):
             function = self.whileStart
@@ -300,10 +294,15 @@ nop
 ENDCall{nome}:"""
         return assembly
     def parse(self):
+        self.variaveis = {}
+        self.lastCallback = [1023]
+        self.whileNumber = 0
+        self.functions = []
+        self.lineNumber = 1
         codigo = self.code.split('\n')
         assembly = 'leaw $1024, %A\nmovw %A, (%A)\n'
         for linha in codigo:
-            linha = linha.strip()
+            linha = re.sub(r'#.*', '', linha).strip()
             if linha== '':
                 continue
             function = self.idLine(linha)
