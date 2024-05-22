@@ -38,10 +38,9 @@ class AssemblySimulatorGUI:
         self.infos = tk.Frame(self.tabSim)
         self.infos.pack(expand=True, fill='both', side=tk.TOP)
         # RAM list
+
         self.ram_view = tk.Listbox(self.infos, height=10, width=10)
-        
         self.ram_view.pack(side=tk.LEFT, fill='both', expand=True)
-        
         self.ram_viewBin = tk.Listbox(self.infos, height=10, width=25)
         self.ram_viewBin.pack(side=tk.LEFT, fill='both', expand=True)
 
@@ -59,6 +58,7 @@ class AssemblySimulatorGUI:
         self.clockCycles.pack(side=tk.TOP)
         
         self.update_ram()
+
         # Control buttons
         self.run_button = tk.Button(self.infosRight, text="Run", command=self.run)
         self.save_button = tk.Button(self.infosRight, text="Save", command=self.updateCode)
@@ -82,15 +82,17 @@ class AssemblySimulatorGUI:
         self.send_button.pack(side=tk.LEFT)
         self.buttonsEsis.pack(side=tk.TOP)
 
-        # disable code viewe
+        # disable code viewer
         self.codeViwer = twl.TextWithLineNumbers(self.tabEsis, height=20, width=60)
         self.codeViwer.text.config(state='disabled')
         self.codeViwer.pack(expand=True, fill='both')
-        self.assembly = ''
         self.ram_view.config(yscrollcommand=self.sync_scroll)
         self.ram_viewBin.config(yscrollcommand=self.sync_scroll)
+
+        self.assembly = ''
         self.codeNasm = ''
         self.codeEsis = ''
+        self.programSent = False
     def changeTab(self, event):
         if self.notebook.index(self.notebook.select()) == 1:
             self.codeNasm = self.code_editor.text.get(1.0, tk.END).strip()
@@ -105,6 +107,7 @@ class AssemblySimulatorGUI:
             self.code_editor.text.delete(1.0, tk.END)
             self.code_editor.text.insert(tk.END, self.codeNasm)
             self.code_editor._on_update_line_numbers()
+        self.highlight_line()
     def translate(self):
         
         self.assembler.addCode(self.code_editor.text.get(1.0, tk.END))
@@ -122,18 +125,14 @@ class AssemblySimulatorGUI:
     def sendAssembly(self):
         self.programSent = True
         self.codeEsis = self.code_editor.text.get(1.0, tk.END).strip()
-        self.assembler.addCode(self.code_editor.text.get(1.0, tk.END))
-        self.assembly = self.assembler.parse()
+        self.translate()
         self.notebook.select(0)
         
         self.code_editor.text.delete(1.0, tk.END)
         self.code_editor.text.insert(tk.END, self.assembly)
-
+        self.restart()
         self.updateCode()
         self.update_ram()
-        self.code_editor.text.tag_remove("highlight", "1.0", "end")
-        # Add highlight tag to the determined line
-        self.code_editor.text.tag_add("highlight", f"{1}.0", f"{1}.end")
         self.clockCycles.config(text=f"Clock Cycles: 0")
         self.code_editor._on_update_line_numbers()
     def restart(self):
@@ -153,6 +152,7 @@ class AssemblySimulatorGUI:
             messagebox.showerror("Error", str(e))
         self.update_ram()
         self.clockCycles.config(text=f"Clock Cycles: {self.SIM.clockCycles}")
+        self.code_editor.text.tag_remove("highlight", "1.0", "end")
     def step(self):
         try:
             self.SIM.step()
@@ -176,6 +176,7 @@ class AssemblySimulatorGUI:
             except:
                 self.ram_viewBin.insert(tk.END, f'Binario:  {value}')
         self.regsList.delete(0, tk.END)
+        self.regsListBin.delete(0, tk.END)
         self.regsList.insert(tk.END, f'%A: {self.SIM.registers["%A"]}')
         try:
             self.regsListBin.insert(tk.END, f'Binario:  {int(self.SIM.registers["%A"]):016b}')
