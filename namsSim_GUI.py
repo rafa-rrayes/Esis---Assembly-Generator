@@ -20,10 +20,12 @@ class AssemblySimulatorGUI:
         self.code_editor.text.tag_configure("highlight", background="yellow")
 
         self.notebook = ttk.Notebook(root)
-        self.tabSim = ttk.Frame(self.notebook)
+        
         self.tabEsis = ttk.Frame(self.notebook)
-        self.notebook.add(self.tabSim, text="Simulador")
+        self.tabSim = ttk.Frame(self.notebook)
+        
         self.notebook.add(self.tabEsis, text="Esis")
+        self.notebook.add(self.tabSim, text="Simulador")
         self.notebook.pack(expand=True, fill='both')
         self.notebook.bind("<<NotebookTabChanged>>", self.changeTab)
         file_menu = tk.Menu(self.menu, tearoff=0)
@@ -94,12 +96,12 @@ class AssemblySimulatorGUI:
         self.codeEsis = ''
         self.programSent = False
     def changeTab(self, event):
-        if self.notebook.index(self.notebook.select()) == 1:
+        if self.notebook.index(self.notebook.select()) == 0:
             self.codeNasm = self.code_editor.text.get(1.0, tk.END).strip()
             self.code_editor.text.delete(1.0, tk.END)
             self.code_editor.text.insert(tk.END, self.codeEsis)
             self.code_editor._on_update_line_numbers()
-        elif self.notebook.index(self.notebook.select()) == 0:
+        elif self.notebook.index(self.notebook.select()) == 1:
             if self.programSent:
                 self.programSent = False
                 return
@@ -107,7 +109,7 @@ class AssemblySimulatorGUI:
             self.code_editor.text.delete(1.0, tk.END)
             self.code_editor.text.insert(tk.END, self.codeNasm)
             self.code_editor._on_update_line_numbers()
-        self.highlight_line()
+            self.highlight_line()
     def translate(self):
         
         self.assembler.addCode(self.code_editor.text.get(1.0, tk.END))
@@ -126,7 +128,7 @@ class AssemblySimulatorGUI:
         self.programSent = True
         self.codeEsis = self.code_editor.text.get(1.0, tk.END).strip()
         self.translate()
-        self.notebook.select(0)
+        self.notebook.select(1)
         
         self.code_editor.text.delete(1.0, tk.END)
         self.code_editor.text.insert(tk.END, self.assembly)
@@ -188,7 +190,7 @@ class AssemblySimulatorGUI:
         except:
             self.regsListBin.insert(tk.END, f'Binario:  {self.SIM.registers["%D"]}')
     def load_file(self):
-        if self.notebook.index(self.notebook.select()) == 1:
+        if self.notebook.index(self.notebook.select()) == 0:
             file_path = filedialog.askopenfilename(filetypes=[("esis files", "*.esis"), ("All files", "*.*")])
         else:
             file_path = filedialog.askopenfilename(filetypes=[("nasm files", "*.nasm"), ("All files", "*.*")])
