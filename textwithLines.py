@@ -22,13 +22,13 @@ class TextWithLineNumbers(tk.Frame):
         self.text.bind('<MouseWheel>', self._on_update_line_numbers)
 
         self._on_update_line_numbers()
-        
+    
     def _on_update_scrollbar(self, *args):
         self.scrollbar.set(*args)
-        self._on_scroll(args[0], args[1])
+        self._on_scroll(args[0])
 
 
-    def _on_scroll(self, arg1, arg2):
+    def _on_scroll(self, arg1):
         self.text.yview('moveto', arg1)
         self.ypos = float(arg1)
         self.line_numbers.yview('moveto', self.ypos)
@@ -38,7 +38,7 @@ class TextWithLineNumbers(tk.Frame):
         self.line_numbers.config(state='normal')
         self.line_numbers.delete(1.0, tk.END)
 
-        line_count = int(self.text.index('end-1c').split('.')[0])
+        line_count = self.text.get('1.0', tk.END).count('\n')
         line_numbers_string = "\n".join(str(i) for i in range(1, line_count+1))
         self.line_numbers.insert(1.0, line_numbers_string)
         self.line_numbers.config(state='disabled')

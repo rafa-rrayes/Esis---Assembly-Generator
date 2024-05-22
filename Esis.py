@@ -307,7 +307,6 @@ ENDCall{nome}:"""
             if linha== '':
                 continue
             function = self.idLine(linha)
-            print(linha)
             assembly += function(linha).strip() + '\n'
         assembly.replace('\t', '')
         return assembly

@@ -25,7 +25,7 @@ class AssemblySimulatorGUI:
         self.notebook.add(self.tabSim, text="Simulador")
         self.notebook.add(self.tabEsis, text="Esis")
         self.notebook.pack(expand=True, fill='both')
-
+        self.notebook.bind("<<NotebookTabChanged>>", self.changeTab)
         file_menu = tk.Menu(self.menu, tearoff=0)
         self.menu.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Open...", command=self.load_file)
@@ -89,24 +89,43 @@ class AssemblySimulatorGUI:
         self.assembly = ''
         self.ram_view.config(yscrollcommand=self.sync_scroll)
         self.ram_viewBin.config(yscrollcommand=self.sync_scroll)
+        self.codeNasm = ''
+        self.codeEsis = ''
+    def changeTab(self, event):
+        if self.notebook.index(self.notebook.select()) == 1:
+            self.codeNasm = self.code_editor.text.get(1.0, tk.END).strip()
+            self.code_editor.text.delete(1.0, tk.END)
+            self.code_editor.text.insert(tk.END, self.codeEsis)
+            self.code_editor._on_update_line_numbers()
+        elif self.notebook.index(self.notebook.select()) == 0:
+            if self.programSent:
+                self.programSent = False
+                return
+            self.codeEsis = self.code_editor.text.get(1.0, tk.END).strip()
+            self.code_editor.text.delete(1.0, tk.END)
+            self.code_editor.text.insert(tk.END, self.codeNasm)
+            self.code_editor._on_update_line_numbers()
     def translate(self):
         
         self.assembler.addCode(self.code_editor.text.get(1.0, tk.END))
-        
+        self.assembly = self.assembler.parse()
         self.codeViwer.text.config(state='normal')
         self.codeViwer.text.delete(1.0, tk.END)
         self.codeViwer.text.insert(tk.END, self.assembly)
         self.codeViwer.text.config(state='disabled')
 
     def saveAssembly(self):
-        file_path = filedialog.asksaveasfilename(filetypes=[("Text files", "*.nasm")])
+        file_path = filedialog.asksaveasfilename(filetypes=[("nasm file", "*.nasm")])
         if file_path:
             with open(file_path, "w") as file:
                 file.write(self.assembly)
     def sendAssembly(self):
+        self.programSent = True
+        self.codeEsis = self.code_editor.text.get(1.0, tk.END).strip()
         self.assembler.addCode(self.code_editor.text.get(1.0, tk.END))
         self.assembly = self.assembler.parse()
         self.notebook.select(0)
+        
         self.code_editor.text.delete(1.0, tk.END)
         self.code_editor.text.insert(tk.END, self.assembly)
 
@@ -116,6 +135,7 @@ class AssemblySimulatorGUI:
         # Add highlight tag to the determined line
         self.code_editor.text.tag_add("highlight", f"{1}.0", f"{1}.end")
         self.clockCycles.config(text=f"Clock Cycles: 0")
+        self.code_editor._on_update_line_numbers()
     def restart(self):
         self.SIM.restart()
         self.SIM.loadCode(self.code_editor.text.get(1.0, tk.END))
@@ -167,20 +187,26 @@ class AssemblySimulatorGUI:
         except:
             self.regsListBin.insert(tk.END, f'Binario:  {self.SIM.registers["%D"]}')
     def load_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("esis files", "*.esis"), ("All files", "*.*")])
+        if self.notebook.index(self.notebook.select()) == 1:
+            file_path = filedialog.askopenfilename(filetypes=[("esis files", "*.esis"), ("All files", "*.*")])
+        else:
+            file_path = filedialog.askopenfilename(filetypes=[("nasm files", "*.nasm"), ("All files", "*.*")])
         if file_path:
             with open(file_path, "r") as file:
                 self.code_editor.text.delete(1.0, tk.END)
                 self.code_editor.text.insert(tk.END, file.read())
+        self.code_editor._on_update_line_numbers()
         self.updateCode()
     def save_file(self):
-        file_path = filedialog.asksaveasfilename(filetypes=[("Text files", "*.txt")])
+        file_path = filedialog.asksaveasfilename(filetypes=[("nasm file", "*.nasm")])
         if file_path:
             with open(file_path, "w") as file:
                 file.write(self.code_editor.text.get(1.0, tk.END))
         self.updateCode()    
     def updateCode(self):
-        self.SIM.loadCode(self.code_editor.text.get(1.0, tk.END))        
+
+        self.SIM.loadCode(self.code_editor.text.get(1.0, tk.END)) 
+
     def highlight_line(self):
       
         # Remove any previous highlights
