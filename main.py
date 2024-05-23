@@ -142,9 +142,7 @@ class AssemblySimulatorGUI:
         self.SIM.loadCode(self.code_editor.text.get(1.0, tk.END))
         self.update_ram()
 
-        self.code_editor.text.tag_remove("highlight", "1.0", "end")
-        # Add highlight tag to the determined line
-        self.code_editor.text.tag_add("highlight", f"{1}.0", f"{1}.end")
+        self.highlight_line()
         self.clockCycles.config(text=f"Clock Cycles: 0")
     def run(self):
         self.updateCode()
