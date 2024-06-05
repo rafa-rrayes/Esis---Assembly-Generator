@@ -110,8 +110,6 @@ movw (%A), %A\n"""
         nome = content[0]
         valor = content[1]
         endereco = self.getVariavel(nome)
-        # if + or - or | or & in linha
-        print(valor.split('-'))
         if '+' in linha or ('-' in linha and valor.split('-')[0]) or '|' in linha or '&' in linha:
             return self.Aritmetica(linha)
         elif '!' in linha or '-' in linha:
