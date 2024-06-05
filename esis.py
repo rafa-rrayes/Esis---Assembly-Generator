@@ -111,7 +111,8 @@ movw (%A), %A\n"""
         valor = content[1]
         endereco = self.getVariavel(nome)
         # if + or - or | or & in linha
-        if '+' in linha or '-' in linha or '|' in linha or '&' in linha:
+        print(valor.split('-'))
+        if '+' in linha or ('-' in linha and valor.split('-')[0]) or '|' in linha or '&' in linha:
             return self.Aritmetica(linha)
         elif '!' in linha or '-' in linha:
             return self.notNeg(linha)
@@ -301,7 +302,9 @@ ENDCall{nome}:"""
         self.functions = []
         self.lineNumber = 1
         codigo = self.code.split('\n')
-        assembly = 'leaw $1024, %A\nmovw %A, (%A)\n'
+        assembly = ''
+        if '()' in self.code or 'def' in self.code or 'while' in self.code or 'if' in self.code:
+            assembly = 'leaw $1024, %A\nmovw %A, (%A)\n'
         for linha in codigo:
             comentario = ''
             if '#' in linha:

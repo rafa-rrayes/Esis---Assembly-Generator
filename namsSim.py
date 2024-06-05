@@ -1,4 +1,18 @@
 import re
+def dec_to_bin(num):
+    try:
+        dec = int(num)
+        result = f'{0 if dec>=0 else 1}'+ f'{abs(dec):016b}'[1:]
+        return result
+    except:
+        return num
+def bin_to_dec(x):
+    try:
+        num = str(x)
+        result = int(f"{int(num[1:])*-1 if num[0] == '1' else int(num[1:])}", 2)
+        return result
+    except:
+        return x
 class AssemblySimulator:
     def __init__(self):
         self.registers = {'%A': 0, '%D': 0}
@@ -70,9 +84,9 @@ class AssemblySimulator:
         if arg[1] == 'registrador':
             return self.registers[arg[0]]
         if arg[1] == 'memoria':
-            return self.memoria[self.registers['%A']]
+            return self.memoria[bin_to_dec(self.registers['%A'])]
         if arg[1] == 'imediato' or arg[1] == 'const':
-            return int(arg[0][1:])
+            return dec_to_bin(int(arg[0][1:]))
         raise Exception(f"linha {self.program_counter+1}: erro ao decifrar valor")
     def tipo(self, arg):
         if re.fullmatch(self.reg, arg):
@@ -145,7 +159,7 @@ class AssemblySimulator:
         if args[0][1] == 'section':
             self.registers['%A'] = args[0][0][1:]
             return
-        self.registers['%A'] = int(args[0][0][1:])
+        self.registers['%A'] = dec_to_bin(int(args[0][0][1:]))
 
     def movw(self, args):
         valor = self.parseValue(args[0])
@@ -153,78 +167,90 @@ class AssemblySimulator:
             if arg[1] == 'registrador':
                 self.registers[arg[0]] = valor
             elif arg[1] == 'memoria':
-                self.memoria[self.registers['%A']] = valor
+                self.memoria[bin_to_dec(self.registers['%A'])] = valor
     def addw(self, args):
-        value1 = self.parseValue(args[0])
-        value2 = self.parseValue(args[1])
+        value1 = bin_to_dec(self.parseValue(args[0]))
+        value2 = bin_to_dec(self.parseValue(args[1]))
         result = value1 + value2
         for arg in args[2:]:
             if arg[1] == 'registrador':
-                self.registers[arg[0]] = result
+                self.registers[arg[0]] = dec_to_bin(result)
             elif arg[1] == 'memoria':
-                self.memoria[self.registers['%A']] = result
+                self.memoria[bin_to_dec(self.registers['%A'])] = dec_to_bin(result)
     def subw(self, args):
-        value1 = self.parseValue(args[0])
-        value2 = self.parseValue(args[1])
+        value1 = bin_to_dec(self.parseValue(args[0]))
+        value2 = bin_to_dec(self.parseValue(args[1]))
         result = value1 - value2
         for arg in args[2:]:
             if arg[1] == 'registrador':
-                self.registers[arg[0]] = result
+                self.registers[arg[0]] = dec_to_bin(result)
             elif arg[1] == 'memoria':
-                self.memoria[self.registers['%A']] = result
+                self.memoria[bin_to_dec(self.registers['%A'])] = dec_to_bin(result)
     def rsubw(self, args):
-        value1 = self.parseValue(args[0])
-        value2 = self.parseValue(args[1])
+        value1 = bin_to_dec(self.parseValue(args[0]))
+        value2 = bin_to_dec(self.parseValue(args[1]))
         result = value2 - value1
         for arg in args[2:]:
             if arg[1] == 'registrador':
-                self.registers[arg[0]] = result
+                self.registers[arg[0]] = dec_to_bin(result)
             elif arg[1] == 'memoria':
-                self.memoria[self.registers['%A']] = result
+                self.memoria[bin_to_dec(self.registers['%A'])] = dec_to_bin(result)
     def incw(self, args):
-        self.registers[args[0][0]] = self.registers[args[0][0]]+1
+        self.registers[args[0][0]] = dec_to_bin(bin_to_dec(self.registers[args[0][0]])+1)
     def decw(self, args):
-        self.registers[args[0][0]] = self.registers[args[0][0]]-1
+        self.registers[args[0][0]] = dec_to_bin(bin_to_dec(self.registers[args[0][0]])-1)
     def notw(self, args):
-        self.registers[args[0][0]] = ~self.registers[args[0][0]]
+        num = self.registers[args[0][0]]
+        num = num.replace('0', '2')
+        num = num.replace('1', '0')
+        num = num.replace('2', '1')
+        self.registers[args[0][0]] = num
     def negw(self, args):
-        self.registers[args[0][0]] = -self.registers[args[0][0]]
+        self.registers[args[0][0]] = dec_to_bin(-bin_to_dec(self.registers[args[0][0]]))
     def andw(self, args):
         value1 = self.parseValue(args[0])
         value2 = self.parseValue(args[1])
-        result = value1 & value2
+        for i, j in zip(value1, value2):
+            if i == '1' and j == '1':
+                result += '1'
+            else:
+                result += '0'
         if args[2][1] == 'registrador':
             self.registers[args[2][0]] = result
         elif args[2][1] == 'memoria':
-            self.memoria[self.registers['%A']] = result
+            self.memoria[bin_to_dec(self.registers['%A'])] = result
     def orw(self, args):
         value1 = self.parseValue(args[0])
         value2 = self.parseValue(args[1])
-        result = value1 | value2
+        for i, j in zip(value1, value2):
+            if i == '1' or j == '1':
+                result += '1'
+            else:
+                result += '0'
         if args[2][1] == 'registrador':
             self.registers[args[2][0]] = result
         elif args[2][1] == 'memoria':
-            self.memoria[self.registers['%A']] = result
+            self.memoria[bin_to_dec(self.registers['%A'])] = result
     def jmp(self):
         self.program_counter = self.sections[self.registers['%A']]
     def je(self, args):
-        if self.registers[args[0][0]] == 0:
+        if bin_to_dec(self.registers[args[0][0]]) == 0:
             self.program_counter = self.sections[self.registers['%A']]
     def jne(self, args):
-        if self.registers[args[0][0]] != 0:
+        if bin_to_dec(self.registers[args[0][0]]) != 0:
             self.program_counter = self.sections[self.registers['%A']]
     def jg(self, args):
-        if self.registers[args[0][0]] > 0:
+        if bin_to_dec(self.registers[args[0][0]]) > 0:
             self.program_counter = self.sections[self.registers['%A']]
     def jge(self, args):
-        if self.registers[args[0][0]] >= 0:
+        if bin_to_dec(self.registers[args[0][0]]) >= 0:
             self.program_counter = self.sections[self.registers['%A']]
     def jl(self, args):
-        if self.registers[args[0][0]] < 0:
+        if bin_to_dec(self.registers[args[0][0]]) < 0:
             self.program_counter = self.sections[self.registers['%A']]
 
     def jle(self, args):
-        if self.registers[args[0][0]] <= 0:
+        if bin_to_dec(self.registers[args[0][0]]) <= 0:
             self.program_counter = self.sections[self.registers['%A']]
     def nop(self):
         pass
@@ -239,192 +265,15 @@ class AssemblySimulator:
 sim = AssemblySimulator()
 instr = """leaw $1024, %A
 movw %A, (%A)
-
-;A=5
-
 leaw $5, %A
 movw %A, %D
 leaw $1, %A
 movw %D, (%A)
-
-
-
-;C=A-1
-
 leaw $1, %A
-movw %A, %D
-leaw $1, %A
-movw (%A), %A
-subw %A, %D, %D
+movw (%A), %D
 leaw $2, %A
 movw %D, (%A)
-
-leaw $ENDfact, %A
-jmp
-nop
-fact:
-
-
-;B=C
-
-leaw $2, %A
-movw (%A), %D
-leaw $3, %A
-movw %D, (%A)
-
-
-
-;Copia=A
-
-leaw $1, %A
-movw (%A), %D
-leaw $4, %A
-movw %D, (%A)
-
-
-
-;multi()
-
-leaw $ENDCallmulti, %A
-movw %A, %D
-leaw $1024, %A
-movw (%A), %A
-incw %A
-movw %D, (%A)
-leaw $1024, %A
-movw (%A), %D
-incw %D
-movw %D, (%A)
-leaw $multi, %A
-jmp
-nop
-ENDCallmulti:
-
-
-;C=C-1
-
-leaw $1, %A
-movw %A, %D
-leaw $2, %A
-movw (%A), %A
-subw %A, %D, %D
-leaw $2, %A
-movw %D, (%A)
-
-
-
-;ifC!=1:fact
-
-leaw $2, %A
-movw (%A), %D
-leaw $1, %A
-subw %D, %A, %D
-leaw $ENDIFfact, %A
-je %D
-nop
-leaw $1024, %A
-movw (%A), %D
-incw %D
-movw %D, (%A)
-leaw $ENDIFfact, %A
-movw %A, %D
-leaw $1024, %A
-movw (%A), %A
-movw %D, (%A)
-leaw $fact, %A
-jmp
-nop
-ENDIFfact:
-leaw $1024, %A
-movw (%A), %D
-decw %D
-movw %D, (%A)
-incw %D
-movw %D, %A
-movw (%A), %A
-jmp
-nop
-ENDfact:
-leaw $ENDmulti, %A
-jmp
-nop
-multi:
-
-
-;A=A+Copia
-
-leaw $4, %A
-movw (%A), %D
-leaw $1, %A
-movw (%A), %A
-addw %A, %D, %D
-leaw $1, %A
-movw %D, (%A)
-
-
-
-;B=B-1
-
-leaw $1, %A
-movw %A, %D
-leaw $3, %A
-movw (%A), %A
-subw %A, %D, %D
-leaw $3, %A
-movw %D, (%A)
-
-
-
-;ifB!=1:multi
-
-leaw $3, %A
-movw (%A), %D
-leaw $1, %A
-subw %D, %A, %D
-leaw $ENDIFmulti, %A
-je %D
-nop
-leaw $1024, %A
-movw (%A), %D
-incw %D
-movw %D, (%A)
-leaw $ENDIFmulti, %A
-movw %A, %D
-leaw $1024, %A
-movw (%A), %A
-movw %D, (%A)
-leaw $multi, %A
-jmp
-nop
-ENDIFmulti:
-leaw $1024, %A
-movw (%A), %D
-decw %D
-movw %D, (%A)
-incw %D
-movw %D, %A
-movw (%A), %A
-jmp
-nop
-ENDmulti:
-
-
-;fact()
-
-leaw $ENDCallfact, %A
-movw %A, %D
-leaw $1024, %A
-movw (%A), %A
-incw %A
-movw %D, (%A)
-leaw $1024, %A
-movw (%A), %D
-incw %D
-movw %D, (%A)
-leaw $fact, %A
-jmp
-nop
-ENDCallfact:"""
+"""
 if __name__ == '__main__':
     sim.loadCode(instr)
     sim.run()

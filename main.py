@@ -5,7 +5,13 @@ from namsSim import AssemblySimulator
 from tkinter import messagebox
 import textwithLines as twl
 from esis import Assembler
-
+def bin_to_dec(x):
+    try:
+        num = str(x)
+        result = int(f"{int(num[1:])*-1 if num[0] == '1' else int(num[1:])}", 2)
+        return result
+    except:
+        return x
 class AssemblySimulatorGUI:
     def __init__(self, master):
         self.SIM = AssemblySimulator()
@@ -95,6 +101,7 @@ class AssemblySimulatorGUI:
         self.codeNasm = ''
         self.codeEsis = ''
         self.programSent = False
+
     def changeTab(self, event):
         if self.notebook.index(self.notebook.select()) == 0:
             self.codeNasm = self.code_editor.text.get(1.0, tk.END).strip()
@@ -146,47 +153,33 @@ class AssemblySimulatorGUI:
         self.clockCycles.config(text=f"Clock Cycles: 0")
     def run(self):
         self.updateCode()
-        try:
-            self.SIM.run()
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
+        self.SIM.run()
         self.update_ram()
         self.clockCycles.config(text=f"Clock Cycles: {self.SIM.clockCycles}")
         self.code_editor.text.tag_remove("highlight", "1.0", "end")
     def step(self):
-        try:
-            self.SIM.step()
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
+        self.SIM.step()
         self.update_ram()
         self.highlight_line()
         self.clockCycles.config(text=f"Clock Cycles: {self.SIM.clockCycles}")
     def sync_scroll(self,*args):
         self.ram_viewBin.yview('moveto', args[0])
         self.ram_view.yview('moveto', args[0])
-        
-
     def update_ram(self):
         self.ram_view.delete(0, tk.END)  # Clear the Listbox
         self.ram_viewBin.delete(0, tk.END)
         for i, value in enumerate(self.SIM.memoria):
-            self.ram_view.insert(tk.END, f'R{i}:  {value}')
-            try:
-                self.ram_viewBin.insert(tk.END, f'Binario:  {int(value):016b}')
-            except:
-                self.ram_viewBin.insert(tk.END, f'Binario:  {value}')
+            decimal = bin_to_dec(value)
+            binario = value
+            self.ram_view.insert(tk.END, f'R{i}:  {decimal}')
+            self.ram_viewBin.insert(tk.END, f'Binario:  {binario}')
         self.regsList.delete(0, tk.END)
         self.regsListBin.delete(0, tk.END)
-        self.regsList.insert(tk.END, f'%A: {self.SIM.registers["%A"]}')
-        try:
-            self.regsListBin.insert(tk.END, f'Binario:  {int(self.SIM.registers["%A"]):016b}')
-        except:
-            self.regsListBin.insert(tk.END, f'Binario:  {self.SIM.registers["%A"]}')
-        self.regsList.insert(tk.END, f'%D: {self.SIM.registers["%D"]}')
-        try:
-            self.regsListBin.insert(tk.END, f'Binario:  {int(self.SIM.registers["%D"]):016b}')
-        except:
-            self.regsListBin.insert(tk.END, f'Binario:  {self.SIM.registers["%D"]}')
+        
+        self.regsList.insert(tk.END, f'%A: {bin_to_dec(self.SIM.registers["%A"])}')
+        self.regsListBin.insert(tk.END, f'Binario:  {self.SIM.registers["%A"]}')
+        self.regsList.insert(tk.END, f'%D: {bin_to_dec(self.SIM.registers["%D"])}')
+        self.regsListBin.insert(tk.END, f'Binario:  {self.SIM.registers["%D"]}')
     def load_file(self):
         if self.notebook.index(self.notebook.select()) == 0:
             file_path = filedialog.askopenfilename(filetypes=[("esis files", "*.esis"), ("All files", "*.*")])
