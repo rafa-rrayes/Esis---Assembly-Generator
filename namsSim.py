@@ -248,7 +248,6 @@ class AssemblySimulator:
     def jl(self, args):
         if bin_to_dec(self.registers[args[0][0]]) < 0:
             self.program_counter = self.sections[self.registers['%A']]
-
     def jle(self, args):
         if bin_to_dec(self.registers[args[0][0]]) <= 0:
             self.program_counter = self.sections[self.registers['%A']]
@@ -261,9 +260,10 @@ class AssemblySimulator:
         self.sections = {}
         self.clockCycles = 0
 
-# Example usage:
-sim = AssemblySimulator()
-instr = """leaw $1024, %A
+
+if __name__ == '__main__':
+    sim = AssemblySimulator()
+    instr = """leaw $1024, %A
 movw %A, (%A)
 leaw $5, %A
 movw %A, %D
@@ -274,7 +274,6 @@ movw (%A), %D
 leaw $2, %A
 movw %D, (%A)
 """
-if __name__ == '__main__':
     sim.loadCode(instr)
     sim.run()
     print(sim.registers)
