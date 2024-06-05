@@ -72,7 +72,6 @@ class AssemblySimulatorGUI:
         self.save_button = tk.Button(self.infosRight, text="Save", command=self.updateCode)
         self.step_button = tk.Button(self.infosRight, text="Step", command=self.step)
         self.restart_button = tk.Button(self.infosRight, text="Restart", command=self.restart)
-
         self.run_button.pack(side=tk.LEFT)
         self.save_button.pack(side=tk.LEFT)
         self.step_button.pack(side=tk.LEFT)
@@ -198,11 +197,8 @@ class AssemblySimulatorGUI:
                 file.write(self.code_editor.text.get(1.0, tk.END))
         self.updateCode()    
     def updateCode(self):
-
         self.SIM.loadCode(self.code_editor.text.get(1.0, tk.END)) 
-
     def highlight_line(self):
-      
         # Remove any previous highlights
         self.code_editor.text.tag_remove("highlight", "1.0", "end")
         # Add highlight tag to the determined line

@@ -210,6 +210,7 @@ class AssemblySimulator:
     def andw(self, args):
         value1 = self.parseValue(args[0])
         value2 = self.parseValue(args[1])
+        result = ''
         for i, j in zip(value1, value2):
             if i == '1' and j == '1':
                 result += '1'
@@ -222,6 +223,7 @@ class AssemblySimulator:
     def orw(self, args):
         value1 = self.parseValue(args[0])
         value2 = self.parseValue(args[1])
+        result = ''
         for i, j in zip(value1, value2):
             if i == '1' or j == '1':
                 result += '1'
